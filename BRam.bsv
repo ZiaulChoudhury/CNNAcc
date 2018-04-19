@@ -13,8 +13,8 @@ interface Bram;
         method Action read(BramLength id, BramWidth col);
         method Action latch;
 	method Action clean;
-	method DataType get(BramLength id);
-        method Action write(DataType data, BramLength id, BramWidth col);
+	method Bit#(64) get(BramLength id);
+        method Action write(Bit#(64) data, BramLength id, BramWidth col);
 endinterface:Bram
 
 
@@ -29,7 +29,7 @@ module mkBram#(Integer _B)(Bram);
 				slice[i].latchData;
 	endmethod
 	
-	method  DataType get(BramLength id);
+	method  Bit#(64) get(BramLength id);
                         	let datas = slice[id].get;
                         return datas;
 	endmethod
@@ -42,7 +42,7 @@ module mkBram#(Integer _B)(Bram);
 
 	endmethod
 	
-        method Action write(DataType data, BramLength id, BramWidth col);
+        method Action write(Bit#(64) data, BramLength id, BramWidth col);
 				slice[id].enq(data,col);
 	endmethod
 

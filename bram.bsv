@@ -7,10 +7,10 @@ import datatypes::*;
 #define WIDTH 512
 
 interface FIFORand;
-        method Action enq(DataType val, BramWidth c);
+        method Action enq(Bit#(64) val, BramWidth c);
 	method Action latchData;
         method Action deq(BramWidth c);
-        method DataType get;
+        method Bit#(64) get;
 	method Action clean;
 endinterface: FIFORand
 
@@ -20,10 +20,10 @@ module mkBuffer(FIFORand);
 	BRAM_Configure cfg = defaultValue;
 	cfg.allowWriteResponseBypass = False;
 	cfg.memorySize = WIDTH;
-	BRAM2Port#(BramWidth, DataType) memory <- mkBRAM2Server(cfg);
-	Reg#(DataType) _cache <- mkReg(0);
+	BRAM2Port#(BramWidth, Bit#(64)) memory <- mkBRAM2Server(cfg);
+	Reg#(Bit#(64)) _cache <- mkReg(0);
 
-	function BRAMRequest#(BramWidth, DataType) makeRequest(Bool write, BramWidth  addr, DataType data);
+	function BRAMRequest#(BramWidth, Bit#(64)) makeRequest(Bool write, BramWidth  addr, Bit#(64) data);
         return BRAMRequest {
                 write : write,
                 responseOnWrite : False,
@@ -38,7 +38,7 @@ module mkBuffer(FIFORand);
 	endmethod
 
 
-	method Action enq(DataType data, BramWidth c);
+	method Action enq(Bit#(64) data, BramWidth c);
 			memory.portA.request.put(makeRequest(True, c, data));
 	endmethod
 
@@ -49,7 +49,7 @@ module mkBuffer(FIFORand);
 	endmethod
 
 
-	method DataType get;
+	method Bit#(64) get;
 		return _cache;
 	endmethod
 	

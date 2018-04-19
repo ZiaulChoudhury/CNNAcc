@@ -1,5 +1,6 @@
 package TB;
 import Stage::*;
+import conv36::*;
 import TubeHeader::*;
 import FixedPoint::*;
 import datatypes::*;
@@ -14,9 +15,8 @@ import "BDPI" function UInt#(32) readPixel1(UInt#(32) ri, UInt#(32) cj, UInt#(32
 import "BDPI" function UInt#(32) readPixel2(UInt#(32) ri, UInt#(32) cj, UInt#(32) ch);
 
 #define IMG 16
-
+#define K 1
 (*synthesize*)
-
 module mkTB();
 
 		Reg#(int) clk <- mkReg(0);
@@ -40,40 +40,45 @@ module mkTB();
 		
 
 		rule layerIn(clk>=1);
-			if(cols == IMG - 1) begin
+			if(cols+2 == IMG) begin
                                 cols <= 0;
                                 rows <= rows + 2;
                         end
                         else
-                        cols <= cols + 1;
+                        cols <= cols + 2;
 
-			Vector#(2, DataType) s1 = newVector;
+			Vector#(K, Bit#(64)) s = newVector;
 			if(rows <= IMG-2) begin
-							
-					Int#(10) pixl1 = truncate(((rows * cols) + 10 ) % 255);
-					Int#(10) pixl2 = truncate((((rows+1) * cols) + 10 ) % 255);
-					s1[0] = fromInt(pixl1);
-					s1[1] = fromInt(pixl2);
-					cnnR.send(s1);
+					for(int k = 0; k<K; k = k +1) begin
+						Vector#(4,DataType) bundle = newVector;
+						for(int r=0; r<2; r = r+1)
+							for(int c = 0; c <2; c = c +1) begin
+								Int#(10) pixl = truncate((((rows+r+2*k) * (cols+c)) + 10 ) % 255);
+								//$display(" %d r %d c %d ", pixl, rows+r+2*k, cols+c);
+								bundle[r*2 + c] = fromInt(pixl);
+							end	
+						s[k] = pack(bundle);
+					end
+					cnnR.send(s);		
+					
 			end	
 			else begin
-				s1[0] = 0;
-				s1[1] = 0;
-				cnnR.send(s1);	
+				Bit#(64) d = 0;
+				s[0] = d;
+				//s[1] = d;
+				cnnR.send(s);	
 			end
 		endrule
 		
 
 		rule layerOut;
-				if(c0 < (IMG/2-1)*(IMG-2)) begin
-					Vector#(16, DataType) data <- cnnR.receive;
-					$display(" %d " , fxptGetInt(data[0]));
-					$display(" %d " , fxptGetInt(data[1]));
-					c0 <= c0 + 1;
-				end
-				else begin
-					$finish(0);
-				end
-		endrule          
+				Vector#(1, Bit#(256)) d <- cnnR.receive;
+				Vector#(16, DataType) x = unpack(d[0]);
+				
+				for(int i=0; i<4; i = i+1)
+					for(int j=0; j<4; j = j + 1)
+						$display(" %d ", fxptGetInt(x[i*4 + j]));
+				$finish(0);
+		endrule      
 endmodule
 endpackage

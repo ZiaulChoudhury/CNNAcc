@@ -46,7 +46,7 @@ module mkMult(Mult);
                         $display("DSP|%d",clk);
 		p0.ishigh;
 		//mul.send(pack(av),pack(bv));
-		let d = fxptTruncate(fxptAdd(av,bv));
+		let d = fxptTruncate(fxptMult(av,bv));
 		outstream.enq(d);
 	endrule
 

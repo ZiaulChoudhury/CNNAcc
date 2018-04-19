@@ -9,19 +9,20 @@ import TubeHeader::*;
 import reduce3::*;
 import BRam::*;
 import mul::*;
+import conv36::*;
 
-#define IMG 16
-#define Filters 8
-#define Roof 2
+
+#define Filters 1
+#define Roof 1
 #define Stencil 3
 #define Banks 4
-#define DW 16
+#define DW 1
 #define DEBUG 0
 
 interface Convolver;
-        //method Action weights(Vector#(1200,CoeffType) datas);
-        method Action send(Vector#(Roof,DataType) datas);
-        method ActionValue#(Vector#(DW,DataType)) receive;
+        method Action weights(Vector#(1200,CoeffType) datas);
+        method Action send(Vector#(Roof,Bit#(64)) datas);
+        method ActionValue#(Vector#(DW,Bit#(256))) receive;
         method Action reboot(Int#(10) img);
         method Action rebootDone;
 endinterface: Convolver
@@ -34,18 +35,19 @@ endinterface: Convolver
 		//############################################# INITS ############################################
 		Reg#(Bool) _rebut <- mkReg(False);
                 Reg#(UInt#(8)) _FR <- mkReg(0);	
-		Reg#(DataType) windowBuffer[Roof][Stencil*Stencil];
+		Reg#(Bit#(64)) windowBuffer[Roof][Stencil*Stencil];
 		Reg#(CoeffType) coeffs[Filters*Stencil*Stencil];
 		Reg#(UInt#(10)) res[Roof];
 		Integer _DSP = Filters * Roof * Stencil * Stencil;
 		Reg#(Int#(32)) clk <- mkReg(0);
-		Reg#(UInt#(10))  img <- mkReg(16);
-		FIFOF#(DataType) instream[Banks];
-		Reg#(DataType) data[Roof][Stencil];
-		Reg#(DataType) store[Banks];
-		FIFOF#(DataType) forward[Filters][Roof];
+		Reg#(UInt#(10))  img <- mkReg(8);
+		FIFOF#(Bit#(64)) instream[Banks];
+		Reg#(Bit#(64)) data[Roof][Stencil];
+		Reg#(Bit#(64)) store[Banks];
+		FIFOF#(Bit#(256)) forward[Filters][Roof];
+		Conv36 convs[Filters][Roof];
 		Mult _PE[_DSP];
-		Pulse _macPulse[Filters][Roof][Stencil*Stencil];
+		Pulse _macPulse[Filters][Roof];
 		Pulse 	collPulse[Roof];
 		Pulse 	_ena <- mkPulse; 
 		Pulse 	_l <- mkPulse; 
@@ -55,7 +57,7 @@ endinterface: Convolver
                 Pulse                                           _bp0 <- mkPulse;
                 Pulse                                           _bp1 <- mkPulse;
                 Pulse                                           _bp2 <- mkPulse;
-		Reg#(DataType)                          	recvData[Filters][Roof];
+		Reg#(Bit#(64))                          	recvData[Filters][Roof];
                 Reg#(BramLength)                           	r2 <- mkReg(0);
                 Reg#(BramLength)                           	r1 <- mkReg(0);
 		Reg#(BramWidth) 				c2 <- mkReg(0);
@@ -97,28 +99,22 @@ endinterface: Convolver
 			for(int k = 0; k<  (Roof); k = k+1) begin
 			forward[f][k] <- mkSizedFIFOF(32);
 			recvData[f][k] <- mkReg(0);
+			convs[f][k] <- mkConv36;
                         _recvEnable[f][k] <- mkPulse;
 			red[f][k] <- mkReducer3;
-			for(int i= 0;i < (Stencil*Stencil); i = i+1)
-                                _macPulse[f][k][i] <- mkPulse;
+                        _macPulse[f][k] <- mkPulse;
 		end
 
 	
-		//######################### CHANGE ########################
-		for(UInt#(10) i =0 ;i < Filters; i = i+1) begin
-			for(UInt#(10) j =0 ;j< Stencil * Stencil; j = j+1)
-				if(j == 4)
-				coeffs[9*i + j] <- mkReg(1);
-				else
-				coeffs[9*i + j] <- mkReg(0);
+		for(UInt#(10) i =0 ;i<  (Filters * Stencil * Stencil); i = i+1) begin
+			coeffs[i] <- mkReg(0);
 		end
-		//##########################################################
-		
+
 		rule _CLK ;
 			clk <= clk + 1;
 		endrule
 		
-		rule _DRAMStrideFetch( /* fetch == True && */ _rebut == False);	
+		rule _DRAMStrideFetch( _rebut == False);	
 				if(DEBUG == 1)
 					$display("conv|%d", clk);
 
@@ -229,34 +225,37 @@ endinterface: Convolver
 
 			if(res[k] >=  (Stencil)-1)
 				for(int f = 0; f< Filters; f = f + 1)
-				for(int i=0;i< (Stencil*Stencil);i = i+1)
-                                        	_macPulse[f][k][i].send;
+                                        	_macPulse[f][k].send;
 		endrule
 
 
 		
 
 		for(int f = 0 ; f<Filters; f = f + 1) begin
-			for(int i=0; i< (Stencil*Stencil); i = i+1)
 					rule pushMac; 
-						if(DEBUG == 1 && f == 0 && i == 0 && k == 0)
+						if(DEBUG == 1 && f == 0 && k == 0 )
                                         		$display("DSP|%d", clk);
-						_macPulse[f][k][i].ishigh;
-						 let id = f*18 + k*(Stencil*Stencil)+i;
-						if( i == 0 && f == 0 && k == 0)
-							$display(" %d %d %d %d %d %d %d %d %d ", fxptGetInt(windowBuffer[0][0]), fxptGetInt(windowBuffer[0][1]), fxptGetInt(windowBuffer[0][2]), fxptGetInt(windowBuffer[0][3]), fxptGetInt(windowBuffer[0][4]), fxptGetInt(windowBuffer[0][5]), fxptGetInt(windowBuffer[0][6]), fxptGetInt(windowBuffer[0][7]), fxptGetInt(windowBuffer[0][8]));
-						if(id == 0)
-							_PE[id].a(windowBuffer[k][i], True);
-						else
-							_PE[id].a(windowBuffer[k][i], False);
-						_PE[id].b(coeffs[f*9 + i]);
-
+						_macPulse[f][k].ishigh;
+						Vector#(9, Bit#(64)) _WB = newVector;
+						Vector#(9, CoeffType) fl = newVector;	
+						for(int i=0; i< (Stencil*Stencil); i = i+1) begin
+							_WB[i] = windowBuffer[k][i];
+							fl[i] = coeffs[f*9 + i];
+						end
+						convs[f][k].sendP(_WB);
+						convs[f][k].sendF(fl);
+						
 					endrule
 
-		rule getResult;
+					rule computeResult;
+						let d <- convs[f][k].result; 
+						forward[f][k].enq(d);
+					endrule
+
+		/*rule getResult;
 			if(DEBUG == 1 && f == 0 && k == 0)
                                         $display("DSP|%d", clk);
-                        Vector#(9,DataType) datas = newVector;
+                        Vector#(9,Bit#(64)) datas = newVector;
 			for(int i=0; i< (Stencil*Stencil); i = i+1) begin
                         	let id = f*18 + k*(Stencil*Stencil)+i;
                         	let d <- _PE[id].out;
@@ -274,7 +273,7 @@ endinterface: Convolver
 		endrule
 
 
-		/*rule receivePort;
+		rule receivePort;
 			if(DEBUG == 1 && f == 0 && k == 0)
                                         $display("conv|%d", clk);
 				  let d = forward[f][k].first; forward[f][k].deq;
@@ -309,8 +308,7 @@ endinterface: Convolver
                                 forward[f][i].clear;
                                 red[f][i].clean;
                                 _recvEnable[f][i].clean;
-				for(Int#(8) j=0;j<fromInteger(Stencil*Stencil);j = j+1)
-					_macPulse[f][i][j].clean;
+				_macPulse[f][i].clean;
                         end
 			
                         c1 <= 0;
@@ -327,19 +325,19 @@ endinterface: Convolver
                                 inputFmap.clean;
                 endrule
 
-		method Action send(Vector#(Roof,DataType) datas);
+		method Action send(Vector#(Roof,Bit#(64)) datas);
 				for(int i=0; i< Roof; i = i + 1) begin
 					let dat = datas[i];
 					instream[i].enq(dat);	
 				end
 		endmethod
                 
-		method ActionValue#(Vector#(DW,DataType)) receive if(_rebut == False);
-					Vector#(DW,DataType) datas = newVector;
+		method ActionValue#(Vector#(DW,Bit#(256))) receive if(_rebut == False);
+					Vector#(DW,Bit#(256)) datas = newVector;
 					for(int f=0; f<Filters; f = f +1)
 						for(int k = 0 ; k <Roof; k = k + 1)  begin
-                        				let d = forward[f][k].first; forward[f][k].deq; //_recvEnable[f][k].ishigh;
-							datas[f*Roof + k] = d;  //recvData[f][k]; 
+                        				let d = forward[f][k].first; forward[f][k].deq; 
+							datas[f*Roof + k] = d;   
 					end
 			return datas;
                 endmethod
@@ -354,11 +352,11 @@ endinterface: Convolver
                                 _rebut <= False;
                 endmethod
 
-        	/*method Action weights(Vector#(1200,CoeffType) datas);
+        	method Action weights(Vector#(1200,CoeffType) datas);
 			for(int i=0; i<Filters ; i = i + 1)
 				for(int j=0; j< 9; j = j + 1)
 					coeffs[i*9 + j] <= datas[i*9 + j];
-		endmethod*/
+		endmethod
 	  endmodule: mkStage
 
 endpackage: Stage
