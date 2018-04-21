@@ -16,7 +16,7 @@ import conv36::*;
 #define Filters 1
 #define Roof 2
 #define Stencil 3
-#define Banks 8
+#define Banks 16
 #define DW 2
 #define DEBUG 0
 
@@ -36,13 +36,13 @@ endinterface: Convolver
 		//############################################# INITS ############################################
 		Reg#(Bool) _rebut <- mkReg(False);
                 Reg#(UInt#(8)) _FR <- mkReg(0);	
-		Reg#(Bit#(64)) windowBuffer[Roof][Stencil*Stencil];
+		Reg#(Bit#(64)) windowBuffer[Roof][Stencil*Stencil + Stencil];
 		Reg#(CoeffType) coeffs[Filters*Stencil*Stencil];
 		Reg#(UInt#(10)) res[Roof];
 		Integer _DSP = Filters * Roof * Stencil * Stencil;
 		Reg#(Int#(32)) clk <- mkReg(0);
 		Reg#(Int#(32)) clk2 <- mkReg(0);
-		Reg#(UInt#(10))  img <- mkReg(8);
+		Reg#(UInt#(10))  img <- mkReg(16);
 		FIFOF#(Bit#(64)) instream[Banks];
 		Reg#(Bit#(64)) data[Roof][Stencil];
 		Reg#(Bit#(64)) store[Banks];
@@ -94,7 +94,7 @@ endinterface: Convolver
 		end
 
 		for(int k = 0; k<  (Roof); k = k+1)
-			for(int i= 0;i < (Stencil*Stencil); i = i+1) begin
+			for(int i= 0;i < (Stencil*Stencil + Stencil); i = i+1) begin
 				windowBuffer[k][i] <- mkReg(0);
 			end
 		
@@ -131,17 +131,18 @@ endinterface: Convolver
                                  end
                                  else
                                  c1 <= c1 + 1;
-				 
-				 clk2 <= clk2 + 1;
+ 
 				 for(BramLength i = 0; i <  (Roof); i = i +1) begin
 				 	let d = instream[i].first; instream[i].deq;
 					let index = (r1 + i )% (Banks);
 					inputFmap.write(d, index, c1);
 				 end
 
-				 if(r1 >=  (Stencil) && c1 >=  (Stencil)) begin
+				 BramLength factor = 1;
+				 if(Roof > 1)
+					factor = Roof - 1;
+				 if(r1 >=  (factor)*(Stencil) && c1 >=  (Stencil)) begin
 				 startRead <= True;
-					$display(" start convolutions at clock %d ", clk2);
 				 end
 			
 				 if(startRead == True)
@@ -216,13 +217,13 @@ endinterface: Convolver
 			if(DEBUG == 1 && k == 0)
                                         $display("conv|%d", clk);
 			collPulse[k].ishigh;
-			for (UInt#(8) i =  (Stencil*Stencil) - 1; i >=  (Stencil); i = i-1)
+			for (UInt#(8) i =  (Stencil*Stencil + Stencil) - 1; i >=  (Stencil); i = i-1)
 				windowBuffer[k][i- (Stencil)] <= windowBuffer[k][i];
 			
 		
 			for (UInt#(8) i = 0;i <  (Stencil); i = i+1) begin
 				let d = data[k][i];
-				windowBuffer[k][ (Stencil*Stencil-Stencil)+i] <= d;
+				windowBuffer[k][ (Stencil*Stencil)+i] <= d;
 			end
 
 			if(res[k] ==  extend(img-1))
@@ -230,7 +231,7 @@ endinterface: Convolver
 			else
 				res[k] <= res[k] + 1;
 
-			if(res[k] >=  (Stencil)-1)
+			if(res[k] >=  (Stencil))
 				for(int f = 0; f< Filters; f = f + 1)
                                         	_macPulse[f][k].send;
 		endrule
@@ -246,7 +247,10 @@ endinterface: Convolver
 						Vector#(9, Bit#(64))  _WB = newVector;
 						Vector#(9, CoeffType) _FL = newVector;	
 						for(int i=0; i< (Stencil*Stencil); i = i+1) begin
-							_WB[i] = windowBuffer[k][i];
+							if((res[k]-1) == Stencil)
+								_WB[i] = windowBuffer[k][i];
+							else
+								_WB[i] = windowBuffer[k][i+Stencil];
 							_FL[i] = coeffs[f*9 + i];
 						end
 						convs[f][k].sendP(_WB);

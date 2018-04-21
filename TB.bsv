@@ -14,7 +14,7 @@ import "BDPI" function Action initialize_image();
 import "BDPI" function UInt#(32) readPixel1(UInt#(32) ri, UInt#(32) cj, UInt#(32) ch);
 import "BDPI" function UInt#(32) readPixel2(UInt#(32) ri, UInt#(32) cj, UInt#(32) ch);
 
-#define IMG 16
+#define IMG 32
 #define K 2
 (*synthesize*)
 module mkTB();
@@ -64,8 +64,8 @@ module mkTB();
 			end	
 			else begin
 				Bit#(64) d = 0;
-				s[0] = d;
-				s[1] = d;
+				for(int k = 0; k<K; k = k +1)
+				s[k] = d;
 				cnnR.send(s);	
 			end
 		endrule
@@ -82,6 +82,7 @@ module mkTB();
 							$display(" %d ", fxptGetInt(x[i*4 + j]));
 				$display(" ###################### ");
 				end
+				$display(" -------------------------------- ");
 				end
 				else
 				$finish(0);
