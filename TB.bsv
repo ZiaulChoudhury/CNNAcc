@@ -15,7 +15,7 @@ import "BDPI" function UInt#(32) readPixel1(UInt#(32) ri, UInt#(32) cj, UInt#(32
 import "BDPI" function UInt#(32) readPixel2(UInt#(32) ri, UInt#(32) cj, UInt#(32) ch);
 
 #define IMG 16
-#define K 1
+#define K 2
 (*synthesize*)
 module mkTB();
 
@@ -42,13 +42,13 @@ module mkTB();
 		rule layerIn(clk>=1);
 			if(cols+2 == IMG) begin
                                 cols <= 0;
-                                rows <= rows + 2;
+                                rows <= rows + 2*K;
                         end
                         else
                         cols <= cols + 2;
 
 			Vector#(K, Bit#(64)) s = newVector;
-			if(rows <= IMG-2) begin
+			if(rows <= IMG-2*K) begin
 					for(int k = 0; k<K; k = k +1) begin
 						Vector#(4,DataType) bundle = newVector;
 						for(int r=0; r<2; r = r+1)
@@ -65,19 +65,25 @@ module mkTB();
 			else begin
 				Bit#(64) d = 0;
 				s[0] = d;
-				//s[1] = d;
+				s[1] = d;
 				cnnR.send(s);	
 			end
 		endrule
 		
 
 		rule layerOut;
-				Vector#(1, Bit#(256)) d <- cnnR.receive;
-				Vector#(16, DataType) x = unpack(d[0]);
-				
-				for(int i=0; i<4; i = i+1)
-					for(int j=0; j<4; j = j + 1)
-						$display(" %d ", fxptGetInt(x[i*4 + j]));
+				c0 <= c0 + 1;
+				if(c0 < 2) begin
+				Vector#(2, Bit#(256)) d <- cnnR.receive;
+				for(int o=0; o<2; o = o + 1) begin
+					Vector#(16, DataType) x = unpack(d[o]);
+					for(int i=0; i<4; i = i+1)
+						for(int j=0; j<4; j = j + 1)
+							$display(" %d ", fxptGetInt(x[i*4 + j]));
+				$display(" ###################### ");
+				end
+				end
+				else
 				$finish(0);
 		endrule      
 endmodule

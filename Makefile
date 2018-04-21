@@ -7,13 +7,12 @@ BSC=bsc
 # Bluesim targets
 
 .PHONY: dag dag2
- 
+
 dag:
-	$(BSC)  -verilog -u -cpp -parallel-sim-link 8 -no-warn-action-shadowing Stage.bsv
+	#$(BSC)  -verilog -u -cpp -parallel-sim-link 8 -no-warn-action-shadowing TB.bsv
+	#$(BSC)  -verilog -o ver -e mkTB *.v 
 	$(BSC)  -sim  -u -g mkTB -show-schedule -parallel-sim-link 8 -no-warn-action-shadowing -show-range-conflict -cpp  TB.bsv
-	#$(BSC)  -sim  -u -g mkXilibus  +RTS -K20M -RTS -show-schedule -parallel-sim-link 8 -no-warn-action-shadowing -show-range-conflict -cpp  Xilibus.bsv
 	$(BSC)  -sim  -e mkTB  -o ram  *.ba
-	#$(BSC)  -sim  -e mkXilibus  -o ram  *.ba image-utilities.cpp
 
 
 dag2:
@@ -35,6 +34,6 @@ clean:
 
 # Clean all intermediate files, plus Verilog files, executables, schedule outputs
 fullclean:
-	rm -f  *~  *.bi  *.bo  *.ba  *.h  *.cxx  *.o *.v
-	rm -f  *.exe   *.so  *.sched  *.v  *.vcd
+	rm -rf  *~  *.bi  *.bo  *.ba  *.h  *.cxx  *.o v* x* w*
+	rm -rf  *.exe   *.so  *.sched   *.vcd x* w* v*
 

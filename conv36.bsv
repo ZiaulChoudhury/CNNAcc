@@ -56,13 +56,15 @@ module mkConv36(Conv36);
 			for(int i=0 ;i< 3; i = i+1)
 				for(int j=0; j<3; j = j+1)
 				rule _pushMAC;
+				
 
-					/*if( r==0 && c==0 && i ==0 && j ==0) begin
+					if( r==0 && c==0 && i ==0 && j ==0) begin
 						for(int a = 0; a <6; a = a +1)
 							for(int b = 0;b <6; b = b +1)
 								$display(" ---------------- %d ", fxptGetInt(window[a][b]));
 						$display(" ######################### ");
-					end*/
+					end
+	
 					_w[r][c][i][j].ishigh;
 					_PE[r][c][i][j].a(window[r+i][c+j], False);
 					_PE[r][c][i][j].b(coeffs[i][j]);							
@@ -97,10 +99,9 @@ module mkConv36(Conv36);
 			Vector#(4, DataType) bundle = unpack(datas[i + j*3]);
 			for(int k = 0; k <2; k = k+1)
 				for(int l = 0; l<2; l = l + 1) begin
-					window[j*2 + l][i*2+k] <= bundle[k*2 + l];
-					//$display(" %d ", fxptGetInt(bundle[k*2 + l]));
+					//window[j*2 + l][i*2+k] <= bundle[k*2 + l];
+					window[i*2+k][j*2 + l] <= bundle[k*2 + l];
 				end
-			//$display(" ##################### ");
 			end
 
 		for(int r= 0; r <4; r= r + 1)

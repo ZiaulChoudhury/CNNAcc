@@ -9,14 +9,15 @@ import TubeHeader::*;
 import reduce3::*;
 import BRam::*;
 import mul::*;
+import pool2::*;
 import conv36::*;
 
 
 #define Filters 1
-#define Roof 1
+#define Roof 2
 #define Stencil 3
-#define Banks 4
-#define DW 1
+#define Banks 8
+#define DW 2
 #define DEBUG 0
 
 interface Convolver;
@@ -40,11 +41,13 @@ endinterface: Convolver
 		Reg#(UInt#(10)) res[Roof];
 		Integer _DSP = Filters * Roof * Stencil * Stencil;
 		Reg#(Int#(32)) clk <- mkReg(0);
+		Reg#(Int#(32)) clk2 <- mkReg(0);
 		Reg#(UInt#(10))  img <- mkReg(8);
 		FIFOF#(Bit#(64)) instream[Banks];
 		Reg#(Bit#(64)) data[Roof][Stencil];
 		Reg#(Bit#(64)) store[Banks];
 		FIFOF#(Bit#(256)) forward[Filters][Roof];
+		Pool2 pools[Filters][Roof];
 		Conv36 convs[Filters][Roof];
 		Mult _PE[_DSP];
 		Pulse _macPulse[Filters][Roof];
@@ -99,6 +102,7 @@ endinterface: Convolver
 			for(int k = 0; k<  (Roof); k = k+1) begin
 			forward[f][k] <- mkSizedFIFOF(32);
 			recvData[f][k] <- mkReg(0);
+			pools[f][k] <- mkPool2;
 			convs[f][k] <- mkConv36;
                         _recvEnable[f][k] <- mkPulse;
 			red[f][k] <- mkReducer3;
@@ -128,14 +132,17 @@ endinterface: Convolver
                                  else
                                  c1 <= c1 + 1;
 				 
+				 clk2 <= clk2 + 1;
 				 for(BramLength i = 0; i <  (Roof); i = i +1) begin
 				 	let d = instream[i].first; instream[i].deq;
-					let index = (r1 + i)% (Banks);
+					let index = (r1 + i )% (Banks);
 					inputFmap.write(d, index, c1);
 				 end
 
-				 if(r1 >=  (Stencil)-1 && c1 >=  (Stencil))
+				 if(r1 >=  (Stencil-1) && c1 >=  (Stencil)) begin
 				 startRead <= True;
+					$display(" start convolutions at clock %d ", clk2);
+				 end
 			
 				 if(startRead == True)
 				 _ena.send;
@@ -164,7 +171,7 @@ endinterface: Convolver
 			end
 			for(BramLength k = 0; k <  (Roof); k = k + 1)
 				for(BramLength i = 0; i <  (Stencil); i = i +1) begin
-					let index = (r2 + i + k)% (Banks);
+					let index = (r2 + i + k) % (Banks);
 					_readIndex[k][i].enq(index);
                          	end
 			_bp1.send;
@@ -236,52 +243,28 @@ endinterface: Convolver
 						if(DEBUG == 1 && f == 0 && k == 0 )
                                         		$display("DSP|%d", clk);
 						_macPulse[f][k].ishigh;
-						Vector#(9, Bit#(64)) _WB = newVector;
-						Vector#(9, CoeffType) fl = newVector;	
+						Vector#(9, Bit#(64))  _WB = newVector;
+						Vector#(9, CoeffType) _FL = newVector;	
 						for(int i=0; i< (Stencil*Stencil); i = i+1) begin
 							_WB[i] = windowBuffer[k][i];
-							fl[i] = coeffs[f*9 + i];
+							_FL[i] = coeffs[f*9 + i];
 						end
 						convs[f][k].sendP(_WB);
-						convs[f][k].sendF(fl);
+						convs[f][k].sendF(_FL);
 						
 					endrule
 
 					rule computeResult;
 						let d <- convs[f][k].result; 
+						//pools[f][k].send(d);
 						forward[f][k].enq(d);
 					endrule
 
-		/*rule getResult;
-			if(DEBUG == 1 && f == 0 && k == 0)
-                                        $display("DSP|%d", clk);
-                        Vector#(9,Bit#(64)) datas = newVector;
-			for(int i=0; i< (Stencil*Stencil); i = i+1) begin
-                        	let id = f*18 + k*(Stencil*Stencil)+i;
-                        	let d <- _PE[id].out;
-                                datas[i] = d;
-			end
-			red[f][k].send(datas);
-                endrule
+					/*rule deadPooled;
+						let d <- pools[f][k].reduced;
+						forward[f][k].enq(d);
+					endrule*/
 
-
-		rule getComputeResult; 
-			if(DEBUG == 1 && f == 0 && k == 0)
-                                        $display("conv|%d", clk);
-			let d <- red[f][k].reduced;
-			forward[f][k].enq(d);
-		endrule
-
-
-		rule receivePort;
-			if(DEBUG == 1 && f == 0 && k == 0)
-                                        $display("conv|%d", clk);
-				  let d = forward[f][k].first; forward[f][k].deq;
-                                  recvData[f][k] <= d;
-                                 _recvEnable[f][k].send;
-                endrule*/
-
-		
 		end
 		end
 
