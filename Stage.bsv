@@ -139,7 +139,7 @@ endinterface: Convolver
 					inputFmap.write(d, index, c1);
 				 end
 
-				 if(r1 >=  (Stencil-1) && c1 >=  (Stencil)) begin
+				 if(r1 >=  (Stencil) && c1 >=  (Stencil)) begin
 				 startRead <= True;
 					$display(" start convolutions at clock %d ", clk2);
 				 end
@@ -171,7 +171,7 @@ endinterface: Convolver
 			end
 			for(BramLength k = 0; k <  (Roof); k = k + 1)
 				for(BramLength i = 0; i <  (Stencil); i = i +1) begin
-					let index = (r2 + i + k) % (Banks);
+					let index = (r2 + i + 2*k) % (Banks);
 					_readIndex[k][i].enq(index);
                          	end
 			_bp1.send;
