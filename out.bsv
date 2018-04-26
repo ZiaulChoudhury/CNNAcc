@@ -11,13 +11,14 @@ import datatypes::*;
 import chunk::*;
 
 #define Rate 1
-#define SIZE 3200
+#define S 2
+#define SIZE 6300
 
 interface Store;
         method Action write(Vector#(Rate,Bit#(128)) vals, Bool _ready);
 	method Action latchData;
         method Action read;
-	method ActionValue#(Vector#(Rate,Bit#(64))) flushtoDRAM(Int#(20) total_output);
+	method ActionValue#(Vector#(S,Bit#(64))) flushtoDRAM(Int#(20) total_output);
         method Vector#(Rate,Bit#(128)) get;
 	method Action clean;
 	method ActionValue#(Bit#(1)) flusherReady;
@@ -29,6 +30,7 @@ module mkStore(Store);
 	Reg#(BramWidth) front <- mkReg(0);
 	Reg#(Bit#(128)) _cache[Rate];
 	Reg#(int) clk <- mkReg(0);
+	Reg#(Int#(20)) outFlush <- mkReg(0);
 	Wire#(Bool)                                 _l0            <- mkWire;
 	Wire#(Bool)                                 _l1            <- mkWire;
 	Chunk memory[Rate];
@@ -89,12 +91,21 @@ module mkStore(Store);
 		end
 	endmethod
 
-	method ActionValue#(Vector#(Rate,Bit#(64))) flushtoDRAM(Int#(20) total_output);
-			 Vector#(Rate,Bit#(64)) datas = newVector;
+	method ActionValue#(Vector#(S,Bit#(64))) flushtoDRAM(Int#(20) total_output);
+			 Vector#(S,Bit#(64)) datas = newVector;
 			 for(int i = 0 ;i < fromInteger(Rate); i = i +1) begin
-					let d <- memory[i].flushed(total_output);
+					let d <- memory[i].flushed;
 					datas[i] = d;
 			 end
+			 if(outFlush >= total_output-1) begin
+                                datas[S-1] = 1;
+                                outFlush <= 0;
+                          end
+                          else begin
+                                datas[S-1] = 0;
+                                outFlush <= outFlush + 1;
+                          end
+
 		return datas;
 	endmethod
 

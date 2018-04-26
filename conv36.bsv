@@ -11,6 +11,7 @@ interface Conv36;
 	method Action sendP(Vector#(9, Bit#(64)) datas);
 	method Action sendF(Vector#(9, CoeffType) filter);
 	method ActionValue#(Bit#(128)) result;
+	method Action clean;
 endinterface
 
 
@@ -41,7 +42,7 @@ module mkConv36(Conv36);
 			for(int k=0 ; k<3; k = k + 1)
 				for(int l=0; l <3; l = l+1) begin	
 					_PE[i][j][k][l] <- mkMult;
-					_w[i][j][k][k] <- mkPulse;
+					_w[i][j][k][l] <- mkPulse;
 				end
 		end
 	
@@ -129,6 +130,21 @@ module mkConv36(Conv36);
 				out[i*4 + j] = _rv[i][j];
 				end
 			return pack(out);
+	endmethod
+
+	method Action clean;
+			for(int i=0; i<2; i = i+1)
+                	for(int j=0; j<4; j = j + 1) begin
+                        	red[i][j].clean;
+                        	forward[i][j].clear;
+                        	_r[i][j].clean;
+                        	for(int k=0 ; k<3; k = k + 1)
+                                	for(int l=0; l <3; l = l+1) begin 
+                                        	_PE[i][j][k][l].clean;
+                                        	_w[i][j][k][l].clean;
+                                	end
+                	end
+
 	endmethod
 endmodule
 endpackage

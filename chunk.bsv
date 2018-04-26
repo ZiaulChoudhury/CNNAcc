@@ -9,7 +9,7 @@ import Vector::*;
 import FixedPoint::*;
 import datatypes::*;
 
-#define SIZE 3200
+#define SIZE 6300
 
 interface Chunk;
 	method Action write(Bit#(128) values, BramWidth index);	
@@ -18,7 +18,7 @@ interface Chunk;
 	method Bit#(128) get;
 	method Action clean;	
 	method Action flush(Bit#(128) data);
-	method ActionValue#(Bit#(64)) flushed(Int#(20) total_output);
+	method ActionValue#(Bit#(64)) flushed;
 	method Bool _Empty;
 endinterface
 
@@ -65,7 +65,7 @@ module mkChunk(Chunk);
 	endmethod
 
 		
-	method ActionValue#(Bit#(64)) flushed(Int#(20) total_output);
+	method ActionValue#(Bit#(64)) flushed;
 
 			Bit#(64) data = 0;	
 			if(flushCounter == 1)

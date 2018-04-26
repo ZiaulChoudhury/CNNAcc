@@ -88,7 +88,7 @@ module mkTB(Std);
 		endrule
 	
 
-		rule writeMem( c0 < 50);
+		rule writeMem; //( c0 < 50);
 			$display(" pushing data at clock %d ", clk);
 			Vector#(2, Bit#(128)) d <- cnnR.receive;
 			Vector#(1, Bit#(128)) z = newVector;
@@ -135,17 +135,19 @@ module mkTB(Std);
 
 
 		rule _out;
-				Vector#(1,Bit#(64)) d <- outBRAM.flushtoDRAM(4);
+				Vector#(2,Bit#(64)) d <- outBRAM.flushtoDRAM(100);
 				$display(" flushing from memory at clk %d ", clk);
 				for(int l = 0; l<K; l = l + 1) begin
 					Vector#(4, DataType) data = unpack(d[l]);
                                 	for(UInt#(10) i=0; i<4; i = i+1)begin
                                         	$display(" %d ", fxptGetInt(data[i]));
-					//forward[0][i].enq(pack(data[i]));
                                 	end
 					$display(" #################################### ");
 				end
 				$display(" ---------------------------------------- ");
+				
+				if(d[1] == 1)
+					$finish(0);
 
 		endrule		   
 

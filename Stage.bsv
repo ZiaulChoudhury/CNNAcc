@@ -21,7 +21,7 @@ import conv36::*;
 #define DEBUG 0
 
 interface Convolver;
-        //method Action weights(Vector#(1200,CoeffType) datas);
+        method Action weights(Vector#(1200,CoeffType) datas);
         method Action send(Vector#(Roof,Bit#(64)) datas);
         method ActionValue#(Vector#(DW,Bit#(128))) receive;
         method Action reboot(Int#(10) img, Bool dP);
@@ -39,9 +39,7 @@ endinterface: Convolver
 		Reg#(Bit#(64)) windowBuffer[Roof][Stencil*Stencil];
 		Reg#(CoeffType) coeffs[Filters*Stencil*Stencil];
 		Reg#(UInt#(10)) res[Roof];
-		Integer _DSP = Filters * Roof * Stencil * Stencil;
 		Reg#(Int#(32)) clk <- mkReg(0);
-		Reg#(Int#(32)) clk2 <- mkReg(0);
 		Reg#(UInt#(10))  img <- mkReg(10);
 		FIFOF#(Bit#(64)) instream[Banks];
 		Reg#(Bit#(64)) data[Roof][Stencil];
@@ -49,7 +47,6 @@ endinterface: Convolver
 		FIFOF#(Bit#(128)) forward[Filters][Roof];
 		Pool2 pools[Filters][Roof];
 		Conv36 convs[Filters][Roof];
-		Mult _PE[_DSP];
 		Pulse _macPulse[Filters][Roof];
 		Pulse 	collPulse[Roof];
 		Pulse 	_ena <- mkPulse; 
@@ -69,17 +66,11 @@ endinterface: Convolver
 		Reg#(Bool)                                      fetch <- mkReg(False);
                 Reg#(Bool)                               	startRead    <- mkReg(False);		
                 Reg#(Bool)                               	_dopool    <- mkReg(False);		
-		Reducer3 red[Filters][Roof];	
 		Bram 						inputFmap    <- mkBram(Banks); 					
 		Reg#(Bool)                               	_latch       <- mkReg(False);
 		FIFOF#(BramLength) 				_readIndex[Roof][Stencil]; 
 		Reg#(UInt#(1)) 					stride[Roof]; 
 		//################################################################################################
-
-
-		for(int i = 0; i<  fromInteger(_DSP); i = i+1)
-			_PE[i] <- mkMult;
-
 
 		for(BramLength i=0; i <Banks; i = i +1 ) begin
 			instream[i] <- mkSizedFIFOF(2);
@@ -109,7 +100,6 @@ endinterface: Convolver
 			pools[f][k] <- mkPool2;
 			convs[f][k] <- mkConv36;
                         _recvEnable[f][k] <- mkPulse;
-			red[f][k] <- mkReducer3;
                         _macPulse[f][k] <- mkPulse;
 		end
 
@@ -288,9 +278,6 @@ endinterface: Convolver
 
 		rule _reboot (_rebut == True && _FR > 0);
                         _latch <= False;
-                        for(int i = 0; i< fromInteger(_DSP); i = i+1)
-                                _PE[i].clean;
-
 			_bp0.clean;	
 			_bp1.clean;
                         for(int i=0; i<fromInteger(Roof); i = i+1) begin
@@ -306,7 +293,8 @@ endinterface: Convolver
 			for(int f = 0 ; f< Filters; f = f +1)
                         for(int i=0; i<fromInteger(Roof); i = i+1) begin
                                 forward[f][i].clear;
-                                red[f][i].clean;
+				convs[f][i].clean;
+				pools[f][i].clean;
                                 _recvEnable[f][i].clean;
 				_macPulse[f][i].clean;
                         end
@@ -353,11 +341,11 @@ endinterface: Convolver
                                 _rebut <= False;
                 endmethod
 
-        	/*method Action weights(Vector#(1200,CoeffType) datas);
+        	method Action weights(Vector#(1200,CoeffType) datas);
 			for(int i=0; i<Filters ; i = i + 1)
 				for(int j=0; j< 9; j = j + 1)
 					coeffs[i*9 + j] <= datas[i*9 + j];
-		endmethod*/
+		endmethod
 	  endmodule: mkStage
 
 endpackage: Stage
