@@ -6,16 +6,16 @@ import datatypes::*;
 
 #define WIDTH 512
 
-interface FIFORand;
+interface Buffer;
         method Action enq(Bit#(64) val, BramWidth c);
 	method Action latchData;
         method Action deq(BramWidth c);
         method Bit#(64) get;
 	method Action clean;
-endinterface: FIFORand
+endinterface
 
 (*synthesize*)
-module mkBuffer(FIFORand);
+module mkBuffer(Buffer);
 
 	BRAM_Configure cfg = defaultValue;
 	cfg.allowWriteResponseBypass = False;

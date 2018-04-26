@@ -20,7 +20,7 @@ endinterface:Bram
 
 module mkBram#(Integer _B)(Bram);
 	
-	FIFORand slice[_B];
+	Buffer slice[_B];
 	for(int i=0;i<fromInteger(_B);i= i +1)
 		slice[i] <- mkBuffer;
 

@@ -13,18 +13,18 @@ import pool2::*;
 import conv36::*;
 
 
-#define Filters 1
-#define Roof 2
+#define Filters 2
+#define Roof 1
 #define Stencil 3
-#define Banks 16
+#define Banks 4
 #define DW 2
 #define DEBUG 0
 
 interface Convolver;
-        method Action weights(Vector#(1200,CoeffType) datas);
+        //method Action weights(Vector#(1200,CoeffType) datas);
         method Action send(Vector#(Roof,Bit#(64)) datas);
-        method ActionValue#(Vector#(DW,Bit#(256))) receive;
-        method Action reboot(Int#(10) img);
+        method ActionValue#(Vector#(DW,Bit#(128))) receive;
+        method Action reboot(Int#(10) img, Bool dP);
         method Action rebootDone;
 endinterface: Convolver
 
@@ -36,17 +36,17 @@ endinterface: Convolver
 		//############################################# INITS ############################################
 		Reg#(Bool) _rebut <- mkReg(False);
                 Reg#(UInt#(8)) _FR <- mkReg(0);	
-		Reg#(Bit#(64)) windowBuffer[Roof][Stencil*Stencil + Stencil];
+		Reg#(Bit#(64)) windowBuffer[Roof][Stencil*Stencil];
 		Reg#(CoeffType) coeffs[Filters*Stencil*Stencil];
 		Reg#(UInt#(10)) res[Roof];
 		Integer _DSP = Filters * Roof * Stencil * Stencil;
 		Reg#(Int#(32)) clk <- mkReg(0);
 		Reg#(Int#(32)) clk2 <- mkReg(0);
-		Reg#(UInt#(10))  img <- mkReg(16);
+		Reg#(UInt#(10))  img <- mkReg(10);
 		FIFOF#(Bit#(64)) instream[Banks];
 		Reg#(Bit#(64)) data[Roof][Stencil];
 		Reg#(Bit#(64)) store[Banks];
-		FIFOF#(Bit#(256)) forward[Filters][Roof];
+		FIFOF#(Bit#(128)) forward[Filters][Roof];
 		Pool2 pools[Filters][Roof];
 		Conv36 convs[Filters][Roof];
 		Mult _PE[_DSP];
@@ -65,12 +65,15 @@ endinterface: Convolver
                 Reg#(BramLength)                           	r1 <- mkReg(0);
 		Reg#(BramWidth) 				c2 <- mkReg(0);
 		Reg#(BramWidth) 				c1 <- mkReg(0);
+		Reg#(Bool)                                      _r <- mkReg(True);
 		Reg#(Bool)                                      fetch <- mkReg(False);
                 Reg#(Bool)                               	startRead    <- mkReg(False);		
+                Reg#(Bool)                               	_dopool    <- mkReg(False);		
 		Reducer3 red[Filters][Roof];	
 		Bram 						inputFmap    <- mkBram(Banks); 					
 		Reg#(Bool)                               	_latch       <- mkReg(False);
 		FIFOF#(BramLength) 				_readIndex[Roof][Stencil]; 
+		Reg#(UInt#(1)) 					stride[Roof]; 
 		//################################################################################################
 
 
@@ -85,6 +88,7 @@ endinterface: Convolver
 
 		for(int k = 0; k< (Roof); k = k+1) begin
 			collPulse[k] <- mkPulse;
+			stride[k] <- mkReg(0);
 			_bp[k] <- mkPulse;
 			res[k] <- mkReg(0);
 			for(int i=0;i<  (Stencil) ; i = i+1) begin
@@ -94,7 +98,7 @@ endinterface: Convolver
 		end
 
 		for(int k = 0; k<  (Roof); k = k+1)
-			for(int i= 0;i < (Stencil*Stencil + Stencil); i = i+1) begin
+			for(int i= 0;i < (Stencil*Stencil); i = i+1) begin
 				windowBuffer[k][i] <- mkReg(0);
 			end
 		
@@ -138,10 +142,9 @@ endinterface: Convolver
 					inputFmap.write(d, index, c1);
 				 end
 
-				 BramLength factor = 1;
-				 if(Roof > 1)
-					factor = Roof - 1;
-				 if(r1 >=  (factor)*(Stencil) && c1 >=  (Stencil)) begin
+				
+				
+				 if(r1 >= (Stencil-1) && c1 >=  (Stencil)) begin
 				 startRead <= True;
 				 end
 			
@@ -158,8 +161,9 @@ endinterface: Convolver
 
 			  	if(c2 ==  extend(img-1)) begin
                                 	c2 <= 0;
-                          	if (r2 +  (Roof) >=  (Banks))
+                          	if (r2 +  (Roof) >=  (Banks)) begin
                                         r2 <= 0;
+				end
                                 else 
                                         r2 <= r2 +  (Roof);
                           	end
@@ -172,7 +176,7 @@ endinterface: Convolver
 			end
 			for(BramLength k = 0; k <  (Roof); k = k + 1)
 				for(BramLength i = 0; i <  (Stencil); i = i +1) begin
-					let index = (r2 + i + 2*k) % (Banks);
+					let index = (r2 + i + k) % (Banks);
 					_readIndex[k][i].enq(index);
                          	end
 			_bp1.send;
@@ -180,7 +184,7 @@ endinterface: Convolver
 
 		rule _latchData (_rebut == False);
 			if(DEBUG == 1)
-                                        $display("conv|%d", clk);
+                        	$display("conv|%d", clk);
 			inputFmap.latch;
 			_l.send;
 			_bp1.ishigh;
@@ -213,28 +217,35 @@ endinterface: Convolver
 		endrule
 		
 
-		rule collect; 
+		 rule collect; 
 			if(DEBUG == 1 && k == 0)
                                         $display("conv|%d", clk);
 			collPulse[k].ishigh;
-			for (UInt#(8) i =  (Stencil*Stencil + Stencil) - 1; i >=  (Stencil); i = i-1)
+			for (UInt#(8) i =  (Stencil*Stencil) - 1; i >=  (Stencil); i = i-1)
 				windowBuffer[k][i- (Stencil)] <= windowBuffer[k][i];
 			
 		
 			for (UInt#(8) i = 0;i <  (Stencil); i = i+1) begin
 				let d = data[k][i];
-				windowBuffer[k][ (Stencil*Stencil)+i] <= d;
+				windowBuffer[k][ (Stencil*Stencil-Stencil)+i] <= d;
 			end
 
-			if(res[k] ==  extend(img-1))
+			if(res[k] ==  extend(img-1)) begin
 				res[k] <= 0;
+			end
 			else
 				res[k] <= res[k] + 1;
 
-			if(res[k] >=  (Stencil))
-				for(int f = 0; f< Filters; f = f + 1)
+			if(res[k] >=  (Stencil)-1) begin
+				if(res[k] == extend(img-1) || stride[k] == 0) begin
+					for(int f = 0; f< Filters; f = f + 1)
                                         	_macPulse[f][k].send;
+				end begin
+					stride[k] <= (stride[k] + 1);
+				end
+			end
 		endrule
+
 
 
 		
@@ -247,10 +258,7 @@ endinterface: Convolver
 						Vector#(9, Bit#(64))  _WB = newVector;
 						Vector#(9, CoeffType) _FL = newVector;	
 						for(int i=0; i< (Stencil*Stencil); i = i+1) begin
-							if((res[k]-1) == Stencil)
-								_WB[i] = windowBuffer[k][i];
-							else
-								_WB[i] = windowBuffer[k][i+Stencil];
+							_WB[i] = windowBuffer[k][i];
 							_FL[i] = coeffs[f*9 + i];
 						end
 						convs[f][k].sendP(_WB);
@@ -258,16 +266,21 @@ endinterface: Convolver
 						
 					endrule
 
-					rule computeResult;
-						let d <- convs[f][k].result; 
-						//pools[f][k].send(d);
+
+					rule noPool (_dopool == False);
+						let d <- convs[f][k].result;
 						forward[f][k].enq(d);
 					endrule
+					
+					rule maxPool (_dopool == True);
+						let d <- convs[f][k].result; 
+						pools[f][k].send(d);
+					endrule
 
-					/*rule deadPooled;
+					rule deadPooled (_dopool == True);
 						let d <- pools[f][k].reduced;
 						forward[f][k].enq(d);
-					endrule*/
+					endrule
 
 		end
 		end
@@ -319,17 +332,18 @@ endinterface: Convolver
 				end
 		endmethod
                 
-		method ActionValue#(Vector#(DW,Bit#(256))) receive if(_rebut == False);
-					Vector#(DW,Bit#(256)) datas = newVector;
+		method ActionValue#(Vector#(DW,Bit#(128))) receive if(_rebut == False);
+					Vector#(DW,Bit#(128)) datas = newVector;
 					for(int f=0; f<Filters; f = f +1)
 						for(int k = 0 ; k <Roof; k = k + 1)  begin
-                        				let d = forward[f][k].first; forward[f][k].deq; 
+                        				let d = forward[f][k].first; forward[f][k].deq;
 							datas[f*Roof + k] = d;   
 					end
 			return datas;
                 endmethod
 		
-		 method Action reboot(Int#(10) im);
+		 method Action reboot(Int#(10) im, Bool dP);
+			_dopool <= dP;
                         img <= unpack(pack(im));
                         _rebut <= True;
                         _FR <= 2;
@@ -339,11 +353,11 @@ endinterface: Convolver
                                 _rebut <= False;
                 endmethod
 
-        	method Action weights(Vector#(1200,CoeffType) datas);
+        	/*method Action weights(Vector#(1200,CoeffType) datas);
 			for(int i=0; i<Filters ; i = i + 1)
 				for(int j=0; j< 9; j = j + 1)
 					coeffs[i*9 + j] <= datas[i*9 + j];
-		endmethod
+		endmethod*/
 	  endmodule: mkStage
 
 endpackage: Stage
