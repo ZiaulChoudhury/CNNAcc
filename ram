@@ -10,7 +10,7 @@ for arg in $@
 do
   if (test "$arg" = "-h")
   then
-    exec $BLUESPECDIR/tcllib/bluespec/bluesim.tcl $0.so mkTB --script_name `basename $0` -h
+    exec $BLUESPECDIR/tcllib/bluespec/bluesim.tcl $0.so mkXilibus --script_name `basename $0` -h
   fi
 done
-exec $BLUESPECDIR/tcllib/bluespec/bluesim.tcl $0.so mkTB --script_name `basename $0` --creation_time 1524755554 "$@"
+exec $BLUESPECDIR/tcllib/bluespec/bluesim.tcl $0.so mkXilibus --script_name `basename $0` --creation_time 1524859344 "$@"

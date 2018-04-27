@@ -6,13 +6,20 @@ BSC=bsc
 # ----------------------------------------------------------------
 # Bluesim targets
 
-.PHONY: dag dag2
+.PHONY: dag dag2 test
 
 dag:
 	#$(BSC)  -verilog -u -cpp -parallel-sim-link 8 -no-warn-action-shadowing TB.bsv
 	#$(BSC)  -verilog -o ver -e mkTB *.v 
 	$(BSC)  -sim  -u -g mkTB -show-schedule -parallel-sim-link 8 -no-warn-action-shadowing -show-range-conflict -cpp  TB.bsv
 	$(BSC)  -sim  -e mkTB  -o ram  *.ba
+
+test:
+	#$(BSC)  -verilog -u -cpp -parallel-sim-link 8 -no-warn-action-shadowing TB.bsv
+	#$(BSC)  -verilog -o ver -e mkTB *.v 
+	$(BSC)  -sim  -u -g mkXilibus -show-schedule -parallel-sim-link 8 -no-warn-action-shadowing -show-range-conflict -cpp  Xilibus.bsv
+	$(BSC)  -sim  -e mkXilibus  -o ram  *.ba image-utilities.cpp
+
 
 
 dag2:

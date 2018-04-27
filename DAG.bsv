@@ -14,14 +14,14 @@ import out::*;
 #define DW 2
 
  
-#define DRAM 8
-#define DWO 16
+#define DRAM 1
+#define DWO 1
 #define DEBUG 0 
 
 interface Std;
         method Action sliceIn(Vector#(Roof,Bit#(64)) datas);
 	method Action filter(Bit#(16) datas, Int#(10) fl, Int#(4) sl);
-        method ActionValue#(Vector#(DWO,Bit#(16))) receive;
+        method ActionValue#(Vector#(DWO,Bit#(64))) receive;
 	method Action resetNet(Int#(12) sl, Bool pool, Int#(5) l, Int#(10) img, Int#(20) total_output);
 	method Action resetDone;
 	method Action probe;
@@ -33,12 +33,10 @@ module mkDAG(Std);
 
 
 		//####################################### INITS ####################################
-		
 		FIFOF#(Bit#(64)) instream[Roof];
-                FIFO#(Bit#(16)) forward[Filters][Roof];
+                FIFO#(Bit#(64)) forward[Filters][Roof];
 		FIFOF#(Bit#(128)) _PartialProd[Filters][Roof];
 		Reg#(Int#(12)) slice <- mkReg(0);
-		Reg#(int) fr <- mkReg(0);
 		Reg#(Int#(5))  layer <- mkReg(0);
 		Reg#(Int#(20)) total_out <- mkReg(0);
 		Pulse _stats[Filters];
@@ -46,7 +44,6 @@ module mkDAG(Std);
 		Pulse	      _o[Filters]; 
 		Pulse	      _r[Filters]; 
 		Pulse	      _p[Filters];
-		Pulse	      _fr <- mkPulse;
 		Pulse	      _z[Filters];
 		Reg#(Bit#(16))  filters[Filters][9];
 		Reg#(UInt#(4)) c[Filters];
@@ -55,11 +52,10 @@ module mkDAG(Std);
 		Reg#(int) clk <- mkReg(0);
 		Convolver stage <- mkStage;
 		Store outSlice[Filters];
-		Integer _depths[4] = {3,8,8,8};
-                Reg#(Int#(8)) dr <- mkReg(0);
-		Wire#(Bool)                                 _l[Filters];
-		
+		Integer _depths[1] = {3};
+                Reg#(Int#(8)) dr <- mkReg(0);	
 		//#####################################################################################
+
 
 		rule _clk;
 			clk <= clk + 1;
@@ -82,7 +78,6 @@ module mkDAG(Std);
 			_z[k] <- mkPulse;
 			_r[k] <- mkPulse;
 			c[k]  <- mkReg(0);
-			_l[k] <- mkWire;
 		end
 		
 		for(int i = 0; i< DW; i = i+1)
@@ -94,7 +89,6 @@ module mkDAG(Std);
 		end
 
 		for(int k = 0; k< Filters ; k = k+1) begin	
-			maxPools[k] <- mkPool2;	
 			for(int i=0;i<Roof; i = i+1) begin
 				_PartialProd[k][i] <- mkSizedFIFOF(12);
 			end
@@ -106,7 +100,7 @@ module mkDAG(Std);
 
 
 		rule __sliceFetch;
-			Vector#(Roof, DataType) _datas = newVector;
+			Vector#(Roof, Bit#(64)) _datas = newVector;
                         for(int i=0; i< Roof; i = i+1) begin
                                 let d = instream[i].first; instream[i].deq;
 				_datas[i] = unpack(d);
@@ -121,6 +115,7 @@ module mkDAG(Std);
 		rule convolution;
 			Vector#(DW, Bit#(128)) datas = newVector;
                         	datas <- stage.receive;
+
 			if(DEBUG == 1)
                                 $display("conv|%d", clk);
 			for(int i = 0; i< DW ; i = i + 1) begin
@@ -181,11 +176,20 @@ module mkDAG(Std);
 					Vector#(8, DataType) _d = unpack(d[i]);
 					Vector#(8, DataType) _s = newVector;
 				        for(int b = 0 ; b < 8 ; b = b + 1) begin
-                                        	 let v = fxptTruncate(fxptAdd(p[i], _d[i]));
+                                        	 let v = fxptTruncate(fxptAdd(p[b], _d[b]));
 						_s[b] = v;
 					end
 					sums[i] = pack(_s);
                                 end
+
+				if( k == 0 ) begin
+				Vector#(8, DataType) m = unpack(sums[0]);
+                                        for(int b=0 ;b< 8; b = b + 1) begin
+                                                $write(fxptGetInt(m[b])); $write("  ");
+                                        end
+				end
+				$display();
+
                         end
 			
 			_stats[k].send;	
@@ -200,20 +204,18 @@ module mkDAG(Std);
 		endrule
 		end
 	
-		/*for(Int#(8) _dram = 0; _dram < fromInteger(Filters) ; _dram = _dram + DRAM) begin 		
-		(*descending_urgency = " _DRAMflush, _DRAMout " *)
-		
+		for(Int#(8) _dram = 0; _dram < fromInteger(Filters) ; _dram = _dram + DRAM) begin 		
 		for(Int#(8) k=0; k<DRAM; k = k+1)
 		rule _DRAMflush (dr == _dram/DRAM);
 			if(DEBUG == 1)
                             $display("Spilling|%d", clk);
-                                Vector#(3,DataType) d <- outSlice[k + _dram].flushtoDRAM(total_out);
+                                Vector#(2,Bit#(64)) d <- outSlice[k + _dram].flushtoDRAM(total_out);
                                 for(UInt#(10) i=0; i<Roof; i = i+1)begin
                                         forward[k][i].enq(pack(d[i]));
                                 end
 				
 				if(k==0) begin
-					if(d[2] == 1) begin
+					if(d[1] == 1) begin
 						
 						if(dr == fromInteger((Filters-DRAM)/DRAM))
                                         		dr <= 0;
@@ -222,26 +224,15 @@ module mkDAG(Std);
 					end
 					
 				end
-                endrule*/
+                endrule
+		end
 	
-                /*rule _DRAMout(dr == _dram/DRAM);
-			let d <- outSlice[_dram].flushNext(total_out);
-			if(d) begin
-				if(dr == fromInteger((Filters-DRAM)/DRAM))
-					dr <= 0;
-				else
-                                	dr <= dr + 1;
-                        end
-
-                endrule*/
-		//end
-	
-        	method ActionValue#(Vector#(DWO,Bit#(16))) receive;	
-			Vector#(DWO,Bit#(16)) datas = newVector;
+        	method ActionValue#(Vector#(DWO,Bit#(64))) receive;	
+			Vector#(DWO,Bit#(64)) datas = newVector;
 			for(UInt#(10) k=0; k<DRAM; k = k+1)
 				for(UInt#(10) i=0; i<Roof; i = i+1)begin
 					let d = forward[k][i].first;
-					datas[2*k + i ] = d; 
+					datas[k*Roof + i ] = d; 
 					forward[k][i].deq;
 				end
                         return datas;

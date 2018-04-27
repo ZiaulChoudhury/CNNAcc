@@ -40,7 +40,7 @@ endinterface: Convolver
 		Reg#(CoeffType) coeffs[Filters*Stencil*Stencil];
 		Reg#(UInt#(10)) res[Roof];
 		Reg#(Int#(32)) clk <- mkReg(0);
-		Reg#(UInt#(10))  img <- mkReg(10);
+		Reg#(UInt#(10))  img <- mkReg(8);
 		FIFOF#(Bit#(64)) instream[Banks];
 		Reg#(Bit#(64)) data[Roof][Stencil];
 		Reg#(Bit#(64)) store[Banks];

@@ -21,7 +21,7 @@ interface Store;
 	method ActionValue#(Vector#(S,Bit#(64))) flushtoDRAM(Int#(20) total_output);
         method Vector#(Rate,Bit#(128)) get;
 	method Action clean;
-	method ActionValue#(Bit#(1)) flusherReady;
+	method Bit#(1) flusherReady;
 endinterface
 
 (*synthesize*)
@@ -122,7 +122,7 @@ module mkStore(Store);
 		_l0 <= True;
 	endmethod
 
-	method ActionValue#(Bit#(1)) flusherReady;
+	method 	Bit#(1) flusherReady;
 			 let f1 = memory[0]._Empty;
 			 if(f1)
 				return 1;

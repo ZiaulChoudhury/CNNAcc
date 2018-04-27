@@ -76,7 +76,12 @@ module mkTB(Std);
 							end	
 						s[k] = pack(bundle);
 					end
-					cnnR.send(s);		
+					cnnR.send(s);	
+
+
+					Vector#(4, DataType) m = unpack(s[0]);
+					for(int i=0 ;i<4; i = i + 1)
+						$display(" sending data %d ", fxptGetInt(m[i]));	
 					
 			end	
 			else begin
