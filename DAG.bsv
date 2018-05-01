@@ -12,10 +12,11 @@ import out::*;
 #define Roof 1
 #define Filters 2
 #define DW 2
+#define S 2
 
  
-#define DRAM 1
-#define DWO 1
+#define DRAM 2
+#define DWO 2
 #define DEBUG 0 
 
 interface Std;
@@ -52,7 +53,7 @@ module mkDAG(Std);
 		Reg#(int) clk <- mkReg(0);
 		Convolver stage <- mkStage;
 		Store outSlice[Filters];
-		Integer _depths[1] = {3};
+		Integer _depths[1] = {1};
                 Reg#(Int#(8)) dr <- mkReg(0);	
 		//#####################################################################################
 
@@ -103,8 +104,13 @@ module mkDAG(Std);
 			Vector#(Roof, Bit#(64)) _datas = newVector;
                         for(int i=0; i< Roof; i = i+1) begin
                                 let d = instream[i].first; instream[i].deq;
+				/*Vector#(4, DataType) m = unpack(d);
+				for(int b=0 ;b < 4; b = b + 1 )
+					$display(" %d ", fxptGetInt(m[b]));
+				$display(" ####################### ");*/
 				_datas[i] = unpack(d);
 			end
+			//$display(" ---------------------------------------- ");
 			if(DEBUG == 1)
 			$display("strideFetch|%d", clk);
                         stage.send(_datas);
@@ -182,13 +188,13 @@ module mkDAG(Std);
 					sums[i] = pack(_s);
                                 end
 
-				if( k == 0 ) begin
+				/*if( k == 0 ) begin
 				Vector#(8, DataType) m = unpack(sums[0]);
                                         for(int b=0 ;b< 8; b = b + 1) begin
                                                 $write(fxptGetInt(m[b])); $write("  ");
                                         end
 				end
-				$display();
+				$display(" ################# ");*/
 
                         end
 			
@@ -209,13 +215,13 @@ module mkDAG(Std);
 		rule _DRAMflush (dr == _dram/DRAM);
 			if(DEBUG == 1)
                             $display("Spilling|%d", clk);
-                                Vector#(2,Bit#(64)) d <- outSlice[k + _dram].flushtoDRAM(total_out);
+                                Vector#(S,Bit#(64)) d <- outSlice[k + _dram].flushtoDRAM(total_out);
                                 for(UInt#(10) i=0; i<Roof; i = i+1)begin
                                         forward[k][i].enq(pack(d[i]));
                                 end
 				
 				if(k==0) begin
-					if(d[1] == 1) begin
+					if(d[S-1] == 1) begin
 						
 						if(dr == fromInteger((Filters-DRAM)/DRAM))
                                         		dr <= 0;
@@ -282,18 +288,25 @@ module mkDAG(Std);
 		endmethod
 
 		method Bool flushDone;
-				Bit#(9) x = 255;
+				Bit#(128) x = 0;
+				Bit#(128) y = 0;
+				for(int i=0; i<Filters; i = i+1) begin
+					x[i] = 1;
+					y[i] = 1;
+				end
+				
 				if(layer == 4) begin
 					for(int i=0 ;i< Filters; i = i + 1) begin
-                                                x[i] = outSlice[i].flusherReady;
+                                                y[i] = outSlice[i].flusherReady;
                                         end
 				end
 				else if(slice == fromInteger(_depths[layer]-1))
                                         for(int i=0 ;i< Filters; i = i + 1) begin
-                                                x[i] = outSlice[i].flusherReady;
+                                                y[i] = outSlice[i].flusherReady;
                                         end
-				UInt#(9) v = unpack(x);
-				return v == 255;
+				//UInt#(9) v = unpack(x);
+				return x == y;
+				//return True;
 		endmethod
 
 		method Action filter(Bit#(16) datas, Int#(10) fl, Int#(4) sl);

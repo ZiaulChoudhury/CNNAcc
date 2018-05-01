@@ -12,7 +12,7 @@ import "BDPI" function Bit#(16) getValue(Int#(32) l, Int#(32) s, Int#(32) f, Int
 import "BDPI" function Int#(32) checkSign(Int#(32) l, Int#(32) s, Int#(32) f, Int#(32) i);
 
 #define Filters 2 
-#define DRAM 1
+#define DW 2
 #define K 1
 
 module mkXilibus();
@@ -60,14 +60,13 @@ module mkXilibus();
 		test <= test + 1;
 		endrule
 
-		//###################LAYERS CODE-GEN PART ##################################
-                Int#(12)  _LayerDepths[1] = {3};
+		//################### LAYERS CODE-GEN PART ##################################
+                Int#(12)  _LayerDepths[1] = {1};
                 Int#(10)  _LayerFilters[1] ={8};
                 Bool      _LayerMaxPool[1] = {False};
-                Int#(32)  _Layerimg[1]  = {16};
-                Int#(20)  _LayerOutputs[1]  = {64};
-
-		//##############################################################
+                Int#(32)  _Layerimg[1]  = {224};
+                Int#(20)  _LayerOutputs[1]  = {12544};
+		//###########################################################################
 
 		rule sendfilter (clk >=1);
 				if(cf == 8) begin
@@ -102,7 +101,7 @@ module mkXilibus();
                                 else
                                                 xr = x;
 
-                               cnn.pushFilter(pack(xr));  
+                               	cnn.pushFilter(pack(xr));  
 
 		endrule
 
@@ -130,43 +129,19 @@ module mkXilibus();
                                 cols <= cols + 2;
 
 
-			
-			Vector#(4, Bit#(16)) s = newVector;
-			
-			Int#(10) d0 = truncate((rows * cols + 10)%255);
-			
-			DataType _d0 = fromInt(d0);
-			Bit#(16) pixl = pack(_d0);
-                  	//Bit#(16) pixl = readPixel((rows) , cols, _LN, layer);
-                        //pixl = (pixl << 6) & 65472;
-                        s[0] = pixl;
 
+			Vector#(K, Bit#(64)) s = newVector;
+			for(int k = 0; k<K; k = k +1) begin
+                                                Vector#(4,DataType) bundle = newVector;
+                                                for(int r=0; r<2; r = r+1)
+                                                        for(int c = 0; c <2; c = c +1) begin
+                                                                Int#(10) pixl = truncate((((rows+r+2*k) * (cols+c)) + 10 ) % 255);
+                                                                bundle[r*2 + c] = fromInt(pixl);
+                                                        end
+                                                s[k] = pack(bundle);
+                        end
 
-			Int#(10) d1 = truncate((rows * (cols+1) + 10)%255);
-			DataType _d1 = fromInt(d1);
-                        Bit#(16) pixl1 = pack(_d1);
-			//Bit#(16) pixl1 = readPixel((rows) , cols+1, _LN, layer);
-                        //pixl1 = (pixl1 << 6) & 65472;
-                        s[1] = pixl1;
-
-			Int#(10) d2 = truncate(((rows + 1) * cols + 10)%255);
-			DataType _d2 = fromInt(d2);
-                        Bit#(16) pixl2 = pack(_d2);
-			//Bit#(16) pixl2 = readPixel((rows + 1) , cols, _LN, layer);
-                        //pixl2 = (pixl2 << 6) & 65472;
-                        s[2] = pixl2;
-
-
-			Int#(10) d3 = truncate(((rows+1) * (cols+1) + 10)%255);
-			DataType _d3 = fromInt(d3);
-                        Bit#(16) pixl3 = pack(_d3);
-			//Bit#(16) pixl3 = readPixel((rows + 1) , cols + 1, _LN, layer);
-                        //pixl3 = (pixl3 << 6) & 65472;
-                        s[3] = pixl3;
-
-
-			Bit#(64) pixs = pack(s);
-                        cnn.pushPixels(pixs);
+                        cnn.pushPixels(s);
 				
 				
 
@@ -174,78 +149,20 @@ module mkXilibus();
 
 
 		rule layerOut;
-				Vector#(DRAM, Bit#(64)) d <- cnn.response;
-				Vector#(4, DataType) s = unpack(d[0]);
-				
-				for(int i=0 ;i<4; i = i + 1)
-					$display(" %d ", fxptGetInt(s[i]));
-				
-				$finish(0);
-		endrule
-		/*rule layerOut;
-                                if(numFilters < Filters) begin
-                                if(c0 < ((_Layerimg[l]-2)/(K))*(_Layerimg[l]-2)) begin
-                                        Vector#(16, Bit#(16)) datas = newVector;
-                                        datas <- cnn.response;
-					if(_LayerMaxPool[l]) begin
-						if(c0 < ((_Layerimg[l]-2)/(K))*(_Layerimg[l]/2-1))	
-						for(int f = 0; f < DRAM ; f = f +1) begin
-							DataType v0 = unpack(datas[f*2 + 0]);
-							if(v0 < 0)
-								storePixel(0, outRow, outCol, numFilters + x + f, l + 1, _Layerimg[l]/2, 1); 
-							else
-								storePixel(datas[f*2+0], outRow, outCol, numFilters + x + f, l + 1, _Layerimg[l]/2, 1); 
-
-						end
-						if(outCol == _Layerimg[l]/2-2) begin
-							outRow <= outRow + 1;
-							outCol <= 0;
-						end
-						else
-							outCol <= outCol + 1;
-					end
-					else begin
-						for(int f = 0; f < DRAM ; f = f +1) begin
-                                                        DataType v0 = unpack(datas[f*2 + 0]);
-                                                        DataType v1 = unpack(datas[f*2 + 1]);
-					
-							
-                                                        if(v0 < 0)
-                                                                storePixel(0, outRow, outCol, numFilters + x + f, l + 1, _Layerimg[l], 1);
-                                                        else
-                                                                storePixel(datas[f*2+0], outRow, outCol, numFilters + x  + f, l + 1, _Layerimg[l], 1);
-
-                                                	if(v1 < 0)
-                                                        	storePixel(0, outRow+1, outCol, numFilters + x + f, l + 1, _Layerimg[l], 1);
-                                                	else
-                                                        	storePixel(datas[f*2+1], outRow+1, outCol, numFilters + x + f, l + 1, _Layerimg[l], 1);
-						end
-						if(outCol == _Layerimg[l]-3) begin
-                                                	outRow <= outRow + 2;
-                                                	outCol <= 0;
-                                        	end
-                                        	else
-                                                	outCol <= outCol + 1;
-					end
-                                      	c0 <= c0 + 1;
-                                end
-                                else begin
-                                        c0 <= 0;
-					outRow <= 0;
-					outCol <= 0;
-                                        numFilters <= numFilters + DRAM;
-                                end
-                                end
-                                else begin
-					if(x + Filters == extend(_LayerFilters[l])) begin
-							x <= 0;
-							l <= l + 1;						
-					end
-					else
-						x <= x + Filters;
-                                        numFilters <= 0;
-					c0 <= 0;
+				c0 <= c0 + 1;
+				$display(" reading data at cycle  %d ", clk);
+				Vector#(DW, Bit#(64)) d <- cnn.response;
+				for(int i = 0; i<DW; i = i + 1) begin
+					Vector#(4, DataType) s = unpack(d[i]);
+					for(int p=0 ;p<4; p = p + 1)
+						$display(" %d ", fxptGetInt(s[p]));
+					$display(" ############################### ");
 				end
-                endrule*/
+				$display(" ------------------------------------");
+				if(c0 == 12431) begin
+					$display(" total number of cycles is %d ", clk);
+					$finish(0);
+				end
+		endrule
 endmodule
 endpackage

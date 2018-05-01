@@ -11,6 +11,9 @@ short int inputVolume1[2*SIZE][2*SIZE][512];
 float filters[16][512][512][15];
 int readArray[] = {1,2,1,2,1,2};
 int storeArray[] = {1,2,1,2,1,2};
+int colCounter = 0;
+int rowCounter = 0;
+ 
 
 double binaryToDecimal(std::string binary, int len)
 {
@@ -133,7 +136,7 @@ extern "C"
 
 extern "C"
 {
-	void storePixel(short int data, int ri, int cj, int ch, int layer, int img, int pad)
+	void storePixel(short int data, int ri, int cj, int ch, int layer, int img, int pad )
 	{
 		std::bitset<16> val(data);
                 std::string number = val.to_string();
@@ -180,6 +183,8 @@ extern "C"
 {
         short int  getValue(int l, int s, int f, int i)
 	{
+
+		//std::cout <<" counter value " << colCounter++; 
 		if ( l <16 && s < 512 && f <512 && i< 15) {
         	float n = filters[i][s][f][l];
 		if(n<0)

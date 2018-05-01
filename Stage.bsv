@@ -40,7 +40,7 @@ endinterface: Convolver
 		Reg#(CoeffType) coeffs[Filters*Stencil*Stencil];
 		Reg#(UInt#(10)) res[Roof];
 		Reg#(Int#(32)) clk <- mkReg(0);
-		Reg#(UInt#(10))  img <- mkReg(8);
+		Reg#(UInt#(10))  img <- mkReg(112);
 		FIFOF#(Bit#(64)) instream[Banks];
 		Reg#(Bit#(64)) data[Roof][Stencil];
 		Reg#(Bit#(64)) store[Banks];
@@ -134,7 +134,7 @@ endinterface: Convolver
 
 				
 				
-				 if(r1 >= (Stencil-1) && c1 >=  (Stencil)) begin
+				 if(r1 >= (Stencil-2) && c1 >=  (Stencil)) begin
 				 startRead <= True;
 				 end
 			

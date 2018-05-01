@@ -15,13 +15,12 @@ import FIFOF::*;
 
 #define K 1
 #define Filters 2
-#define DRAM 1
-#define DW 1
+#define DWO 2
 
 interface MIC;
 	method Action pushFilter(Bit#(16) weight);
-	method Action pushPixels(Bit#(64) pxls);
-	method ActionValue#(Vector#(DW,Bit#(64))) response;
+	method Action pushPixels(Vector#(K,Bit#(64)) pxls);
+	method ActionValue#(Vector#(DWO,Bit#(64))) response;
 	method Action start;
 endinterface
 
@@ -53,23 +52,25 @@ module mkTestBench(MIC);
 		Std cnn <- mkDAG;
 		Reg#(int) cf 	    <- mkReg(0);
 		Reg#(Bool) imgFetch <- mkReg(False);
-		FIFOF#(Bit#(64)) forward[DW];
+		FIFOF#(Bit#(64)) forward[DWO];
 
-		for(int i=0 ;i< DW; i = i + 1)
+		for(int i=0 ;i< DWO; i = i + 1)
 			forward[i] <- mkFIFOF;
 
 		//###################LAYERS CODE-GEN PART ##################################
-                Int#(12)  _LayerDepths[1] = {3};
+                Int#(12)  _LayerDepths[1] = {1};
                 Int#(10)  _LayerFilters[1] ={8};
                 Bool      _LayerMaxPool[1] = {False};
-                Int#(32)  _Layerimg[1]  = {16};
-                Int#(20)  _LayerOutputs[1]  = {64};
+                Int#(32)  _Layerimg[1]  = {224};
+                Int#(20)  _LayerOutputs[1]  = {12544};
 		//#############################################################	
 
 		
 
 		FIFOF#(Bit#(16)) _weight <- mkFIFOF; //mkSizedBRAMFIFOF(1000);
-		FIFOF#(Bit#(64)) pixels <- mkFIFOF;
+		FIFOF#(Bit#(64)) pixels[K];
+		for(int i=0 ;i<K; i = i + 1)
+			pixels[i] <- mkFIFOF;
 
 		rule init_rule (init);
 			_start.ishigh;
@@ -110,16 +111,10 @@ module mkTestBench(MIC);
 
                         Vector#(K, Bit#(64)) s = newVector;
                         if(rows + 2*K <= _Layerimg[layer]) begin
-				Vector#(K, Bit#(64)) m = newVector;
-				m[0] = pixels.first; 
-				pixels.deq;
-
-
-
-                                for(Int#(10) i=0; i<K; i = i+1)
-                                if(rows + extend(i) < _Layerimg[layer]) begin
-                                                        s[i] = m[i];
-                                end
+				for(int i = 0; i<K; i = i+1) begin
+					s[i] = pixels[i].first; 
+					pixels[i].deq;
+				end
                                 cnn.sliceIn(s);
                         end
                         else begin
@@ -201,8 +196,8 @@ module mkTestBench(MIC);
 		
 
 		rule collectOutput;
-				Vector#(DW,Bit#(64)) data <- cnn.receive;
-				for(int i=0 ;i< DW; i = i+1)
+				Vector#(DWO,Bit#(64)) data <- cnn.receive;
+				for(int i=0 ;i< DWO; i = i+1)
 					forward[i].enq(data[i]);
 		endrule
 
@@ -210,9 +205,9 @@ module mkTestBench(MIC);
 				_weight.enq(weight);			
 		endmethod
 
-		method ActionValue#(Vector#(DW,Bit#(64))) response;
-			Vector#(DW, Bit#(64)) d = newVector;
-			for(int i=0 ;i< DW; i = i + 1) begin
+		method ActionValue#(Vector#(DWO,Bit#(64))) response;
+			Vector#(DWO, Bit#(64)) d = newVector;
+			for(int i=0 ;i< DWO; i = i + 1) begin
 					d[i] = forward[i].first; forward[i].deq;
 			end
 		        return d;
@@ -222,8 +217,9 @@ module mkTestBench(MIC);
 			_start.send;
 		endmethod
 		
-		method Action pushPixels(Bit#(64) pxls) if(forward[0].notFull); 
-				pixels.enq(pxls);				
+		method Action pushPixels(Vector#(K,Bit#(64)) pxls) if(forward[0].notFull); 
+				for(int i=0 ;i<K; i = i+1)
+				pixels[i].enq(pxls[i]);				
 		endmethod
 
 endmodule

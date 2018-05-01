@@ -61,7 +61,7 @@ module mkChunk(Chunk);
 
 
 	method Bool _Empty;
-			return fl && !flusher[1].notEmpty;
+			return !flusher[1].notEmpty;
 	endmethod
 
 		
