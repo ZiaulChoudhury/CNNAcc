@@ -64,12 +64,6 @@ module mkConv36(Conv36);
 			for(int i=0 ;i< 3; i = i+1)
 				for(int j=0; j<3; j = j+1)
 				rule _pushMAC;
-					/*if(r==0 && c==0 && i ==0 && j ==0) begin
-						for(int a = 0; a <6; a = a +1)
-							for(int b = 0;b <6; b = b +1)
-								$display(" %d ", fxptGetInt(window[a][b]));
-						$display(" %%%%%%%%%%%%%%%%%%%%  ");
-					end*/
 					_w[r][c][i][j].ishigh;
 					_PE[r][c][i][j].a(window[r+i][c+j], False);
 					_PE[r][c][i][j].b(coeffs[i][j]);							

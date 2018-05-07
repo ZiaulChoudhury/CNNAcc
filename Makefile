@@ -15,10 +15,10 @@ dag:
 	$(BSC)  -sim  -e mkTB  -o ram  *.ba
 
 test:
-	#$(BSC)  -verilog -u -cpp -parallel-sim-link 8 -no-warn-action-shadowing TestBench.bsv
-	#$(BSC)  -verilog -o ver -e mkTestBench *.v 
-	$(BSC)  -sim  -u -g mkXilibus -show-schedule -parallel-sim-link 8 -no-warn-action-shadowing -show-range-conflict -cpp  Xilibus.bsv
-	$(BSC)  -sim  -e mkXilibus  -o ram  *.ba image-utilities.cpp
+	$(BSC)  -verilog -u -cpp -parallel-sim-link 8 -no-warn-action-shadowing DAG.bsv
+	$(BSC)  -verilog -o ver -e mkTestBench *.v 
+	#$(BSC)  -sim  -u -g mkXilibus -show-schedule -parallel-sim-link 8 -no-warn-action-shadowing -show-range-conflict -cpp  Xilibus.bsv
+	#$(BSC)  -sim  -e mkXilibus  -o ram  *.ba image-utilities.cpp
 
 
 

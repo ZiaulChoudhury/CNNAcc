@@ -1,0 +1,124 @@
+package TestBench;
+import FIFO::*;
+import bram::*;
+import Stage::*;
+import Vector::*;
+import pulse::*;
+import datatypes::*;
+import FixedPoint::*;
+
+
+interface Test;
+		method Action put(Bit#(64) data);
+		method ActionValue#(Bit#(16)) receive;
+endinterface
+
+#define K 1
+#define IMG 16
+#define DW 32
+#define WIDTH 256
+
+(*synthesize*)
+module mkTestBench(Test);
+	FIFO#(Bit#(64)) in <- mkFIFO;
+	FIFO#(Bit#(16)) out <- mkFIFO;
+        Reg#(int) rows  <- mkReg(0);
+        Reg#(int) cols  <- mkReg(0);
+        Convolver cnnR <- mkStage;
+	Reg#(DataType) values[WIDTH];
+	Reg#(Bool) start <- mkReg(False);
+	Reg#(BramWidth) c <- mkReg(0);
+	Reg#(BramWidth) d <- mkReg(0);
+	Pulse p <- mkPulse;
+	Reg#(DataType) acc <- mkReg(0);
+	Buffer buffer <- mkBuffer;
+	
+	for(int i = 0; i<WIDTH; i = i + 1)
+			values[i] <- mkReg(0);
+
+                rule layerIn;
+			//in.deq;
+                        if(cols + 2 == IMG) begin
+                                cols <= 0;
+                                rows <= rows + 2*K;
+                        end
+                        else
+                        cols <= cols + 2;
+                        Vector#(K, Bit#(64)) s = newVector;
+                        if(rows <= IMG-2*K) begin
+                                        for(int k = 0; k<K; k = k +1) begin
+                                                Vector#(4,DataType) bundle = newVector;
+                                                for(int r=0; r<2; r = r+1)
+                                                        for(int c = 0; c <2; c = c +1) begin
+                                                                Int#(10) pixl = truncate((((rows+r+2*k) * (cols+c)) + 10 ) % 255); // + truncate(unpack(in.first));
+                                                                bundle[r*2 + c] = fromInt(pixl);
+                                                        end
+                                                s[k] = pack(bundle);
+                                        end
+                                        cnnR.send(s);
+
+                        end
+                        else begin
+                                Bit#(64) d = 0;
+                                for(int k = 0; k<K; k = k +1)
+                                s[k] = d;
+                                cnnR.send(s);
+                        end
+                endrule
+
+		rule _out (start == False);
+				let d <- cnnR.receive;
+				for(int i=0 ;i<DW; i = i+1) begin
+					Vector#(8,DataType) data = unpack(d[i]);
+					for(int j=0;j<8; j = j + 1)
+						values[i*8 + j ] <= data[j];
+				end
+				start <= True;
+		endrule
+
+		rule compute (start == True);
+				d <= d + 1;
+				if( d < WIDTH)
+				buffer.enq(extend(pack(values[c])), c);
+				p.send;
+				
+		endrule
+
+		rule readData (start == True);
+				p.ishigh;
+				buffer.deq(d-1);
+		endrule
+
+		rule latch (start == True);
+				buffer.latchData;
+		endrule
+
+		rule get (start == True);
+				c <= c + 1;
+				if(c < WIDTH) begin
+					DataType d = unpack(truncate(buffer.get));
+					$display(" %d ", fxptGetInt(d));
+					acc <= fxptTruncate(fxptAdd(acc,d));	
+				end
+				else begin
+					$finish(0);
+					$display(" %d ", fxptGetInt(acc));
+				end
+				
+				
+		endrule
+
+
+	
+
+	method Action put(Bit#(64) data);
+			in.enq(data);
+	endmethod
+        method ActionValue#(Bit#(16)) receive;
+			let d = out.first;
+			out.deq;
+			return d;
+	endmethod
+endmodule
+endpackage
+

@@ -11,7 +11,7 @@ import "BDPI" function Action initialize_image();
 import "BDPI" function Bit#(16) getValue(Int#(32) l, Int#(32) s, Int#(32) f, Int#(32) i);
 import "BDPI" function Int#(32) checkSign(Int#(32) l, Int#(32) s, Int#(32) f, Int#(32) i);
 
-#define Filters 2 
+#define Filters 16 
 #define DW 2
 #define K 1
 

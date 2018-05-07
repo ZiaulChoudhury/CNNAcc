@@ -3,12 +3,12 @@ import pulse::*;
 import FixedPoint::*;
 import datatypes::*;
 import FIFOF::*;
-import fxpMul::*;
+//import fxpMul::*;
 
 #define DEBUG 0
 
 interface Mult;
-        method Action a(DataType _a, Bool p);
+        method Action a(DataType _a);
 	method Action b(CoeffType _b);
 	method ActionValue#(DataType) out;
 	method Action clean;
@@ -24,11 +24,10 @@ module mkMult(Mult);
 	Pulse p0 <- mkPulse;
 	Pulse p1 <- mkPulse;
 	FIFOF#(DataType) outstream <- mkFIFOF;
-	FMUL mul <- mkfxpMul;
+	//FMUL mul <- mkfxpMul;
 	Reg#(int) clk <- mkReg(0);
 	Reg#(Bool) print <- mkReg(False);
-	
-	
+		
 	rule _CLK;
 		clk  <= clk + 1;
 	endrule
@@ -45,12 +44,12 @@ module mkMult(Mult);
 		if(DEBUG == 1 && print == True)
                         $display("DSP|%d",clk);
 		p0.ishigh;
-		mul.send(pack(av),pack(bv));
-		//let d = fxptTruncate(fxptMult(av,bv));
-		//outstream.enq(d);
+		//mul.send(pack(av),pack(bv));
+		let d = fxptTruncate(fxptMult(av,bv));
+		outstream.enq(d);
 	endrule
 
-	rule getMultplication;
+	/*rule getMultplication;
 		if(DEBUG == 1 && print == True)
                         $display("DSP|%d",clk);
 		let d <- mul.receive;
@@ -64,11 +63,10 @@ module mkMult(Mult);
                         $display("DSP|%d",clk);
 		p1.ishigh;
 		outstream.enq(cv);
-	endrule
+	endrule*/
 
-        method Action a(DataType _a, Bool p);
+        method Action a(DataType _a);
 		_aVal.enq(_a);
-		print <= p;
 	endmethod
 
 	method Action b(CoeffType _b);
@@ -83,7 +81,7 @@ module mkMult(Mult);
 		
 	method Action clean;
                 outstream.clear;
-		mul.clear;
+		//mul.clear;
 		p1.clean;
 		p0.clean;
 		_aVal.clear;
