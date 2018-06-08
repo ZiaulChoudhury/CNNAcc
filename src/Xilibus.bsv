@@ -16,9 +16,11 @@ import "BDPI" function Bit#(16) getValue(Int#(32) l, Int#(32) s, Int#(32) f, Int
 import "BDPI" function Int#(32) checkSign(Int#(32) l, Int#(32) s, Int#(32) f, Int#(32) i);
 import "BDPI" function Bit#(16) streamData(Int#(32) index);
 
-#define Filters 24 
+#define Filters 16 
 #define DRAM 4
 #define K 2
+
+#define IMG 224
 
 module mkXilibus();
        
@@ -69,16 +71,18 @@ module mkXilibus();
 
 
 		//###################LAYERS CODE-GEN PART ##################################
-                Int#(12)  _LayerDepths[4] = {8,24,24,24};
-                Int#(10)  _LayerFilters[4] ={24,24,24,24};
+                Int#(12)  _LayerDepths[4] = {8,16,16,16};
+                Int#(10)  _LayerFilters[4] ={16,16,16,16};
                 Bool      _LayerMaxPool[4] = {False,False, False, False};
-                Int#(32)  _Layerimg[4]  = {16,16,112,112};
-                //Int#(32)  _Layerimg[4]  = {224,224,224,224};
-                Int#(20)  _LayerOutputs[4]  = {98,98,6050,6050};
-                //Int#(20)  _LayerOutputs[4]  = {24642,24642,24642,24642};
+                //Int#(32)  _Layerimg[4]  = {16,16,112,112};
+                Int#(32)  _Layerimg[4]  = {224,224,224,224};
+                //Int#(20)  _LayerOutputs[4]  = {98,98,6050,6050};
+                Int#(20)  _LayerOutputs[4]  = {24642,24642,24642,24642};
+                Int#(32)  _LayerInputs[4]  = {50464,100928,24642,24642};
                 //#############################################################
 
-		rule check(clk >= 1);
+		(*descending_urgency = "layerOut, check" *)
+		rule check(clk >= 1 && stream == True);
 			
 			Vector#(8, Bit#(16)) s1 = newVector;
 			for(int i=0 ;i<8 ; i = i + 1) begin
@@ -90,6 +94,14 @@ module mkXilibus();
 			PCIE_PKT packet = PCIE_PKT {valid: 1, data: pack (s1), slot: 'h1234, pad: 'h5, last: 0};
                         cnn.put(packet);
 			inc();
+			if( z >= _LayerInputs[l]-1) begin
+				if(l == 1)
+					$display(" stopping here ");
+				stream <= False;
+				z <= 0;
+			end
+			else
+				z <= z + 1;
 		endrule
 
 		/*rule sendfilter (clk >=1);
@@ -228,8 +240,8 @@ module mkXilibus();
 					DataType dx = unpack(datas[0]);
 					DataType dy = unpack(datas[1]);
 
-					$display(" %d %d --- %d Layer %d ", fxptGetInt(dx), fxptGetInt(dy), c0, l);
-					storePixel(datas[0], datas[1], datas[2], datas[3], datas[4], datas[5], datas[6], datas[7],numFilters, l+1, 16,0);	
+					//$display(" %d %d --- %d Layer %d ", fxptGetInt(dx), fxptGetInt(dy), c0, l);
+					storePixel(datas[0], datas[1], datas[2], datas[3], datas[4], datas[5], datas[6], datas[7],numFilters, l+1, IMG,0);	
 					c0 <= c0 + 1;	
 				end
 				else begin

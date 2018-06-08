@@ -14,8 +14,8 @@ import bramfifo::*;
 
 #define BANKS 4
 #define K 2
-#define Filters 24
-#define DW 48
+#define Filters 16
+#define DW 32
 
 #define DRAM 8
 #define DEBUG 0 
@@ -64,7 +64,7 @@ module mkDAG(Std);
 		Reg#(int) clk <- mkReg(0);
 		Convolver stage <- mkStage;
 		MemOut outSlice[DW];
-		Integer _depths[4] = {8,24,24,24};
+		Integer _depths[4] = {8,16,16,16};
                 Reg#(Int#(8)) dr <- mkReg(0);
 		
 		//#####################################################################################			
@@ -95,7 +95,6 @@ module mkDAG(Std);
 		end
 
 		for(int k = 0; k<DRAM; k = k + 1) begin
-			_forward[k] <- mkReg(0);
 			forward[k] <- mkFIFO;
 			_t[k] <- mkPulse;
 		end
@@ -124,8 +123,8 @@ module mkDAG(Std);
                                 store[i] <= datas[i];
                         end
 
-			clk <= clk + 1;
-			$display(" convolver output number %d ", clk);
+			//clk <= clk + 1;
+			//$display(" convolver output %d ", clk%24642);
 			
 			for(int i=0; i< DW ; i = i+1)
 				_z[i].send;	
@@ -190,6 +189,7 @@ module mkDAG(Std);
 					sums = v;
                                 end
 
+
 			_stats[k].send;	
 			_sum[k] <= sums;
 			if(slice >= fromInteger(_depths[layer]-4)) begin
@@ -198,6 +198,7 @@ module mkDAG(Std);
 			else begin
 				_s0[k].send;
 			end
+
 
 
 		endrule
@@ -209,6 +210,10 @@ module mkDAG(Std);
 		
 		rule _flushOut;
 			_s[k].ishigh;
+			/*if( k == 0 && layer == 1) begin
+			$display(" starting to flush %d", clk);
+			clk <= clk + 1;
+			end*/
 			flushQ[k].enq(_sum[k]);
 		endrule
 
@@ -219,10 +224,9 @@ module mkDAG(Std);
                 rule _DRAMflush (dr == _dram/DRAM);
                                 let d <-  flushQ[k + _dram].deq;
                                 forward[k].enq(pack(d));
-                                //flushQ[k+ _dram].deq;
-
-                                if(k == 0)
-                                if(flushed[k + _dram] == 97) begin
+                                
+				if(k == 0)
+                                if(flushed[k + _dram] == 24641) begin
                                         if(dr == fromInteger((DW-DRAM)/DRAM)) begin
 
                                                         dr <= 0;
@@ -230,33 +234,13 @@ module mkDAG(Std);
                                         else
                                                         dr <= dr + 1;
                                         flushed[k + _dram] <= 0;
-					$display(" emptied %d ", k + _dram);
+			
                                 end
                                 else
                                 flushed[k + _dram] <= flushed[k + _dram] + 1;
+
                 endrule
                 end
-	
-		/*rule _DRAMUpdate (dr == _dram/DRAM);
-				_t[k].ishigh;
-				forward[k].enq(_forward[k]);
-				
-				if(k == 0)
-                                if(flushed[k + _dram] == 97) begin
-                                        if(dr == fromInteger((DW-DRAM)/DRAM)) begin
-
-                                                        dr <= 0;
-                                        end
-                                        else
-                                                        dr <= dr + 1;
-
-                                        flushed[k + _dram] <= 0;
-                                end
-                                else
-                                flushed[k + _dram] <= flushed[k + _dram] + 1;
-
-		endrule
-                end*/
 	
         	method ActionValue#(Vector#(DRAM,Bit#(16))) receive;	
 			Vector#(DRAM,Bit#(16)) datas = newVector;
@@ -321,14 +305,12 @@ module mkDAG(Std);
 
 			 	Bit#(DW) x = 0;
 				Bit#(DW) y = 0;
-				
-				for(int i=0; i<DW; i = i + 1) begin
 
+				for(int i=0; i<DW; i = i + 1) begin
 					x[i] = 1;
 					y[i] = 1;
 			
-				end
-				
+				end				
                                 if(slice >= fromInteger(_depths[layer]-4))
                                         for(int i=0 ;i< DW; i = i + 1) begin
                                                 if(flushed[i] == 0)

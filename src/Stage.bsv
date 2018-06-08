@@ -11,11 +11,11 @@ import mul::*;
 import conv36::*;
 
 
-#define Filters 24
+#define Filters 16
 #define Roof 2
 #define Stencil 3
 #define Banks 4
-#define DW 48
+#define DW 32
 
 #define DEBUG 0
 

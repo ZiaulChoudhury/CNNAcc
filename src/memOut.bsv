@@ -4,8 +4,8 @@ import FIFO::*;
 import FixedPoint::*;
 import datatypes::*;
 
-#define MaxR 112
-#define MaxC 112
+#define MaxR 224
+#define MaxC 224
 #define Rate 2
 
 interface MemOut;
@@ -23,14 +23,14 @@ module mkMemOut(MemOut);
 	cfg.allowWriteResponseBypass = False;
 	Integer size = MaxR*MaxC/(Rate);
 	cfg.memorySize = size;
-	BRAM2Port#(UInt#(15), DataType) memory <- mkBRAM2Server(cfg);
+	BRAM2Port#(UInt#(20), DataType) memory <- mkBRAM2Server(cfg);
 	Reg#(DataType) _cache <- mkReg(0);
-	Reg#(UInt#(15)) rear <- mkReg(0);
-        Reg#(UInt#(15)) front <- mkReg(0);
+	Reg#(UInt#(20)) rear <- mkReg(0);
+        Reg#(UInt#(20)) front <- mkReg(0);
 	Wire#(Bool)                                 _l0            <- mkWire;
         Wire#(Bool)                                 _l1            <- mkWire;
 
-	function BRAMRequest#(UInt#(15), DataType) makeRequest(Bool write, UInt#(15)  addr, DataType data);
+	function BRAMRequest#(UInt#(20), DataType) makeRequest(Bool write, UInt#(20)  addr, DataType data);
         return BRAMRequest {
                 write : write,
                 responseOnWrite : False,

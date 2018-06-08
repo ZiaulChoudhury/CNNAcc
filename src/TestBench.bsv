@@ -10,10 +10,11 @@ import FIFOF::*;
 
 
 #define K 2
-#define Filters 24
+#define Filters 16
 
 #define DRAM 4
 #define DW 8
+#define SL 25088
 
 typedef struct {
    Bit #(1) valid;
@@ -34,6 +35,7 @@ module mkTestBench(Sort_IFC);
 		//##################################################### Structures ################################
                 Reg#(PCIE_PKT) rg_raw_input_data <- mkRegU;
                 Reg#(int) clk <- mkReg(0);
+                Reg#(int) fill <- mkReg(0);
                 Pulse _start <- mkPulse;
                 Pulse _p <- mkPulse;
                 Reg#(Int#(10)) filter <- mkReg(0);
@@ -62,13 +64,13 @@ module mkTestBench(Sort_IFC);
 
 
 		//###################LAYERS CODE-GEN PART ##################################
-                Int#(12)  _LayerDepths[4] = {8,24,24,24};
-                Int#(10)  _LayerFilters[4] ={24,24,24,24};
+                Int#(12)  _LayerDepths[4] = {8,16,16,16};
+                Int#(10)  _LayerFilters[4] ={16,16,16,16};
                 Bool      _LayerMaxPool[4] = {False,False, False, False};
-                Int#(32)  _Layerimg[4]  = {16,16,112,112};
-                //Int#(32)  _Layerimg[4]  = {224,224,224,224};
-                Int#(20)  _LayerOutputs[4]  = {98,98,6050,6050};
-                //Int#(20)  _LayerOutputs[4]  = {24642,24642,24642,24642};
+                //Int#(32)  _Layerimg[4]  = {16,16,112,112};
+                Int#(32)  _Layerimg[4]  = {224,224,224,224};
+                //Int#(20)  _LayerOutputs[4]  = {98,98,6050,6050};
+                Int#(20)  _LayerOutputs[4]  = {24642,24642,24642,24642};
 		//#############################################################	
 
 		
@@ -109,7 +111,7 @@ module mkTestBench(Sort_IFC);
 
                 endrule
  
-		rule layerIn(clk>=1 && depthDone == False && c2 < 128 && pad == False); 
+		rule layerIn(clk>=1 && depthDone == False && c2 < SL && pad == False); 
 		
                         Vector#(K, Bit#(64)) s = newVector;
 				Vector#(2, Bit#(64)) p = unpack(pixels.first); pixels.deq;
@@ -119,8 +121,10 @@ module mkTestBench(Sort_IFC);
 				end
                                 cnn.sliceIn(s);
                      
-			if(c2 == 127)
+			if(c2 == SL -1 ) begin
+				$display(" PADDING NOW ");
 				pad <= True;
+			end
 
 		endrule
 
@@ -225,7 +229,7 @@ module mkTestBench(Sort_IFC);
                  endmethod*/
 
 	
-		method Action put (PCIE_PKT pa) if(c2 < 128);
+		method Action put (PCIE_PKT pa) if(c2 < SL);
                         let pcie_pkt = pa;
                         rg_raw_input_data <= pa;
                         Vector#(2, Bit#(64)) raw_data = unpack(pcie_pkt.data);

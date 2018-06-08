@@ -6,8 +6,8 @@
 #include <bitset>
 
 #define SIZE 224
-#define IMG 16
-#define FILTERS 24 
+#define IMG 224
+#define FILTERS 16 
 
 short int inputVolume[2*SIZE][2*SIZE][512];
 short int inputVolume1[2*SIZE][2*SIZE][512];
@@ -30,7 +30,7 @@ typedef struct{
 } packet;
 
 long double stream[2048];
-short int ID[65536];
+short int ID[10000000];
 int streamC = 0;
 
 double binaryToDecimal(std::string binary, int len)
@@ -141,9 +141,9 @@ void initialize_imageCPP()
 	for(int i=0 ;i<IMG; i+=2){
 		for(int j=0;j<IMG; j++){
 			for(int k=0;k<4; k++)
-				ID[counter++] = inputVolume[i][j][k];
+				ID[counter++] = inputVolume[i][j][k]+1;
 			for(int k=0;k<4; k++)
-				ID[counter++] = inputVolume[i+1][j][k];
+				ID[counter++] = inputVolume[i+1][j][k]+1;
 		}
 	}
 
@@ -162,13 +162,13 @@ void initialize_imageCPP()
 	for(int i=0 ;i<IMG; i+=2){
                 for(int j=0;j<IMG; j++){
                         for(int k=0;k<4; k++)
-                                ID[counter++] = inputVolume[i][j][k];
+                                ID[counter++] = inputVolume[i][j][k]+1;
                         for(int k=0;k<4; k++)
-                                ID[counter++] = inputVolume[i+1][j][k];
+                                ID[counter++] = inputVolume[i+1][j][k]+1;
                 }
         }
 
-	for(int depth = 0 ; depth < 6; depth++) {     
+	for(int depth = 0 ; depth < 4; depth++) {     
         for(int i = 0; i<FILTERS; i++){
                 for(int j=0; j<9; j++){
                         for(int k=0; k<4; k++)
@@ -184,9 +184,9 @@ void initialize_imageCPP()
         for(int i=0 ;i<IMG; i+=2){
                 for(int j=0;j<IMG; j++){
                         for(int k=0;k<4; k++)
-                                ID[counter++] = inputVolume[i][j][k];
+                                ID[counter++] = inputVolume[i][j][k]+1;
                         for(int k=0;k<4; k++)
-                                ID[counter++] = inputVolume[i+1][j][k];
+                                ID[counter++] = inputVolume[i+1][j][k]+1;
                 }
         }
         }
@@ -449,3 +449,4 @@ int main()
 				printf(" %d ", 	ID[c++]);
 	return 0;
 }
+

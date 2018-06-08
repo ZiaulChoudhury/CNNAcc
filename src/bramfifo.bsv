@@ -11,8 +11,8 @@ interface BFIFO;
 	method Action startDeq;
 endinterface: BFIFO
 
-#define MaxR 112
-#define MaxC 112
+#define MaxR 224
+#define MaxC 224
 #define Rate 2
 
 (*synthesize*)
@@ -22,15 +22,15 @@ module mkBramFifo(BFIFO);
 	cfg.allowWriteResponseBypass = False;
 	Integer size = (MaxR*MaxC)/Rate;
 	cfg.memorySize = size;
-	BRAM2Port#(Int#(16), DataType) memory <- mkBRAM2Server(cfg);
-	Reg#(Int#(16)) rear <- mkReg(0);
-	Reg#(Int#(16)) front <- mkReg(0);
+	BRAM2Port#(Int#(20), DataType) memory <- mkBRAM2Server(cfg);
+	Reg#(Int#(20)) rear <- mkReg(0);
+	Reg#(Int#(20)) front <- mkReg(0);
 
 	Reg#(Bool) _enabDeq <- mkReg(False);
 	Reg#(DataType) cache <- mkReg(0);
 	FIFO#(DataType) send <- mkFIFO;
 
-	function BRAMRequest#(Int#(16), DataType) makeRequest(Bool write, Int#(16) addr, DataType data);
+	function BRAMRequest#(Int#(20), DataType) makeRequest(Bool write, Int#(20) addr, DataType data);
         return BRAMRequest {
                 write : write,
                 responseOnWrite : False,
