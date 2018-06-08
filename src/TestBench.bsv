@@ -225,7 +225,7 @@ module mkTestBench(Sort_IFC);
                  endmethod*/
 
 	
-		method Action put (PCIE_PKT pa);
+		method Action put (PCIE_PKT pa) if(c2 < 128);
                         let pcie_pkt = pa;
                         rg_raw_input_data <= pa;
                         Vector#(2, Bit#(64)) raw_data = unpack(pcie_pkt.data);

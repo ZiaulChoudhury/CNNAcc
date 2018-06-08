@@ -167,6 +167,30 @@ void initialize_imageCPP()
                                 ID[counter++] = inputVolume[i+1][j][k];
                 }
         }
+
+	for(int depth = 0 ; depth < 6; depth++) {     
+        for(int i = 0; i<FILTERS; i++){
+                for(int j=0; j<9; j++){
+                        for(int k=0; k<4; k++)
+                        if(j == 4 )
+                        ID[counter++] = 1;
+                        else
+                        ID[counter++] = 0;
+                        for(int k=0; k<4; k = k + 1)
+                        ID[counter++] = 0;
+                        }
+        }
+
+        for(int i=0 ;i<IMG; i+=2){
+                for(int j=0;j<IMG; j++){
+                        for(int k=0;k<4; k++)
+                                ID[counter++] = inputVolume[i][j][k];
+                        for(int k=0;k<4; k++)
+                                ID[counter++] = inputVolume[i+1][j][k];
+                }
+        }
+        }
+
 	
   	fclose (file);    
 }

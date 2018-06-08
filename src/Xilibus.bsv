@@ -249,7 +249,7 @@ module mkXilibus();
 							_LN <= 0;
 							stream <= True;
 							printVolume();
-							if(l == 0)
+							if(l == 1)
 								$finish(0);
                                         end
                                         else

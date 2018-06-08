@@ -230,6 +230,7 @@ module mkDAG(Std);
                                         else
                                                         dr <= dr + 1;
                                         flushed[k + _dram] <= 0;
+					$display(" emptied %d ", k + _dram);
                                 end
                                 else
                                 flushed[k + _dram] <= flushed[k + _dram] + 1;
@@ -248,6 +249,7 @@ module mkDAG(Std);
                                         end
                                         else
                                                         dr <= dr + 1;
+
                                         flushed[k + _dram] <= 0;
                                 end
                                 else
@@ -317,19 +319,25 @@ module mkDAG(Std);
 
 		method Bool flushDone;
 
-			 	/*Bit#(16) x = 65535;
-                                if(layer == 4) begin
-                                        for(int i=0 ;i< Filters; i = i + 1) begin
-                                                x[i] = outSlice[i].flusherReady;
+			 	Bit#(DW) x = 0;
+				Bit#(DW) y = 0;
+				
+				for(int i=0; i<DW; i = i + 1) begin
+
+					x[i] = 1;
+					y[i] = 1;
+			
+				end
+				
+                                if(slice >= fromInteger(_depths[layer]-4))
+                                        for(int i=0 ;i< DW; i = i + 1) begin
+                                                if(flushed[i] == 0)
+							x[i] = 1;
+						else
+							x[i] = 0;
                                         end
-                                end
-                                else if(slice >= fromInteger(_depths[layer]-4))
-                                        for(int i=0 ;i< Filters; i = i + 1) begin
-                                                x[i] = outSlice[i].flusherReady;
-                                        end
-                                UInt#(16) v = unpack(x);
-                                return v == 65535;*/
-				return True;
+				
+				return x == y;
 
 		endmethod
 
