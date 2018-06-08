@@ -1,0 +1,43 @@
+<application>
+  <component name="RecentProjectsManager">
+    <option name="recentPaths">
+      <list>
+        <option value="$USER_HOME$/Dropbox/imgProcessing" />
+        <option value="$USER_HOME$/Dropbox/imgProcessing2" />
+      </list>
+    </option>
+    <option name="openPaths">
+      <list>
+        <option value="$USER_HOME$/Dropbox/imgProcessing" />
+      </list>
+    </option>
+    <option name="lastPath" value="$USER_HOME$/Dropbox/imgProcessing" />
+    <option name="additionalInfo">
+      <map>
+        <entry key="$USER_HOME$/Dropbox/imgProcessing">
+          <value>
+            <RecentProjectMetaInfo>
+              <option name="build" value="IC-172.4343.14" />
+              <option name="productionCode" value="IC" />
+              <option name="binFolder" value="$APPLICATION_HOME_DIR$/bin" />
+              <option name="projectOpenTimestamp" value="1516878957021" />
+              <option name="buildTimestamp" value="1506406716764" />
+            </RecentProjectMetaInfo>
+          </value>
+        </entry>
+        <entry key="$USER_HOME$/Dropbox/imgProcessing2">
+          <value>
+            <RecentProjectMetaInfo>
+              <option name="build" value="IC-172.4343.14" />
+              <option name="productionCode" value="IC" />
+              <option name="binFolder" value="$APPLICATION_HOME_DIR$/bin" />
+              <option name="projectOpenTimestamp" value="1507700432913" />
+              <option name="buildTimestamp" value="1506406691684" />
+            </RecentProjectMetaInfo>
+          </value>
+        </entry>
+      </map>
+    </option>
+    <option name="lastProjectLocation" value="$USER_HOME$/Dropbox" />
+  </component>
+</application>

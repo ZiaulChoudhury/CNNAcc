@@ -1,0 +1,13 @@
+*.jou
+*.log
+*.bo
+*.o
+*.ba
+*.cxx
+*.sched
+*.so
+*.odt
+*.txt
+*.c
+
+

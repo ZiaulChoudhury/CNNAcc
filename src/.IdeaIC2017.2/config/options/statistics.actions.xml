@@ -1,0 +1,26 @@
+<application>
+  <component name="ActionsCollector">
+    <counts>
+      <entry action="$Copy" count="1" />
+      <entry action="CompileDirty" count="1" />
+      <entry action="Debug" count="1" />
+      <entry action="EditorBackSpace" count="412" />
+      <entry action="EditorChooseLookupItem" count="5" />
+      <entry action="EditorCopy" count="1" />
+      <entry action="EditorDown" count="534" />
+      <entry action="EditorEnter" count="4" />
+      <entry action="EditorLeft" count="627" />
+      <entry action="EditorPaste" count="1" />
+      <entry action="EditorRight" count="1226" />
+      <entry action="EditorTab" count="2" />
+      <entry action="EditorToggleInsertState" count="2" />
+      <entry action="EditorUp" count="359" />
+      <entry action="OpenFile" count="1" />
+      <entry action="Run" count="128" />
+      <entry action="SaveAll" count="74" />
+      <entry action="ShowSettings" count="1" />
+      <entry action="Stop" count="109" />
+      <entry action="ToggleBookmark" count="1" />
+    </counts>
+  </component>
+</application>
