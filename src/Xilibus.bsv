@@ -4,6 +4,7 @@ import Vector::*;
 import TestBench::*;
 import datatypes::*;
 import FixedPoint::*;
+import TubeHeader::*;
 
 import "BDPI" function Action storePixel(Bit#(16) data1, Bit#(16) data2, Bit#(16) data3, Bit#(16) data4, Bit#(16) data5, Bit#(16) data6, Bit#(16) data7, Bit#(16) data8, Int#(32) ch, Int#(32) layer, Int#(32) img,Int#(32) pool);
 
@@ -14,7 +15,8 @@ import "BDPI" function Action initialize_image();
 import "BDPI" function Action inc();
 import "BDPI" function Bit#(16) getValue(Int#(32) l, Int#(32) s, Int#(32) f, Int#(32) i);
 import "BDPI" function Int#(32) checkSign(Int#(32) l, Int#(32) s, Int#(32) f, Int#(32) i);
-import "BDPI" function Bit#(16) streamData(Int#(32) index);
+
+import "BDPI" function Bit#(16) streamData1(Int#(32) index);
 
 #define Filters 16 
 #define DRAM 4
@@ -71,14 +73,12 @@ module mkXilibus();
 
 
 		//###################LAYERS CODE-GEN PART ##################################
-                Int#(12)  _LayerDepths[4] = {8,16,16,16};
-                Int#(10)  _LayerFilters[4] ={16,16,16,16};
+                Int#(12)  _LayerDepths[4] = {8,32,16,16};
+                Int#(10)  _LayerFilters[4] ={32,16,16,16};
                 Bool      _LayerMaxPool[4] = {False,False, False, False};
-                //Int#(32)  _Layerimg[4]  = {16,16,112,112};
                 Int#(32)  _Layerimg[4]  = {224,224,224,224};
-                //Int#(20)  _LayerOutputs[4]  = {98,98,6050,6050};
                 Int#(20)  _LayerOutputs[4]  = {24642,24642,24642,24642};
-                Int#(32)  _LayerInputs[4]  = {50464,100928,24642,24642};
+                Int#(32)  _LayerInputs[4]  = {100928,201856,24642,24642};
                 //#############################################################
 
 		(*descending_urgency = "layerOut, check" *)
@@ -86,8 +86,7 @@ module mkXilibus();
 			
 			Vector#(8, Bit#(16)) s1 = newVector;
 			for(int i=0 ;i<8 ; i = i + 1) begin
-				Bit#(16) px = streamData(i);
-				px = ( px << 6 ) & 65472;
+				Bit#(16) px = streamData1(i);
 				s1[i] = px;
 			end
 			
@@ -104,132 +103,6 @@ module mkXilibus();
 				z <= z + 1;
 		endrule
 
-		/*rule sendfilter (clk >=1);
-				if(cf == 8) begin
-					if(filterN == Filters - 1)begin
-						if(_fLN >= extend(_LayerDepths[_flayer]-4)) begin
-                                        		if(_ffilter + Filters == extend(_LayerFilters[_flayer])) begin
-                                                		_ffilter <= 0;
-                                                		_flayer <= _flayer + 1;
-                                        		end
-                                        		else
-                                        			_ffilter <= _ffilter + Filters;
-                                        	_fLN <= 0;
-                                		end
-                                		else
-                                        	_fLN <= _fLN + 4;
-						filterN <= 0;
-					end
-					else
-                                	filterN <= filterN + 1;
-                                	cf <= 0;
-                                end
-                                else
-                                	cf <= cf + 1;
-		
-				Vector#(4, CoeffType) data = newVector; 
- 	
-				for(int i=0 ; i<4; i = i + 1) begin
-					Bit#(16) val =  getValue (_flayer, _fLN+i, _ffilter + filterN, cf);
-                                	Int#(32) sign = checkSign(_flayer, _fLN+i, _ffilter + filterN, cf);
-                                	CoeffType x = unpack(val);
-                                	CoeffType zero = 0;
-                                	CoeffType xr = 0;
-                                	if(sign == 1)
-                                                xr = fxptTruncate(fxptSub(zero,x));
-                                	else
-                                                xr = x;
-					data[i] = xr;
-				end
-
-                               cnn.pushFilter(pack(data));  
-
-		endrule
-
-		rule sendPixel (clk >= 1 && stream == True) ;
-			Vector#(K, Bit#(64)) s = newVector;
-
-			if( _LN + 4 <= extend(_LayerDepths[l])) begin
-			cols <= (cols+1)%_Layerimg[layer];
-                        if(cols == _Layerimg[layer]- 1) begin
-					if(rows + K > 15) begin
-						if(l == 1)
-							rows <= 0;
-						_LN <= _LN + 4;
-					end
-					else
-						rows <= rows + K;
-			end
-
-                       						Vector#(4, DataType) m = newVector;
-                       						Vector#(4, DataType) m1 = newVector;
-
-                     
-                                                               	Bit#(16) px = readPixel((rows), cols, 0, l);
-								px = ( px << 6 ) & 65472;	
-								
-								Bit#(16) px1 = readPixel1((rows+1), cols, 0, l);
-                                                                px1 = ( px1 << 6 ) & 65472;
-
-								DataType dx  = unpack( px );
-								DataType dx1 = unpack( px1 );
-							
-								//if(l == 1 && _LN == 4)
-								//	$display(" Layer seding %d %d at @clk %d row %d col %d  ", fxptGetInt(dx), fxptGetInt(dx1), clk, rows, cols);
-                                                                
-								m[0] = dx;
-								m1[0] = dx1; 
-
-
-								px = readPixel((rows), cols, 1, l);
-                                                                px = ( px << 6 ) & 65472;
-
-                                                                px1 = readPixel1((rows+1), cols, 1, l);
-                                                                px1 = ( px1 << 6 ) & 65472;
-
-                                                                dx  = unpack( px );
-                                                                dx1 = unpack( px1 );
-
-								
-								$display(" ############### ");
-                                                                m[1] = dx;
-                                                                m1[1] = dx1;
-
-								px = readPixel((rows), cols, 2, l);
-                                                                px = ( px << 6 ) & 65472;
-
-                                                                px1 = readPixel1((rows+1), cols, 2, l);
-                                                                px1 = ( px1 << 6 ) & 65472;
-
-                                                                dx  = unpack( px );
-                                                                dx1 = unpack( px1 );
-                                                                m[2] = dx;
-                                                                m1[2] = dx1;
-
-
-								px = readPixel((rows), cols, 3, l);
-                                                                px = ( px << 6 ) & 65472;
-
-                                                                px1 = readPixel1((rows+1), cols, 3, l);
-                                                                px1 = ( px1 << 6 ) & 65472;
-
-                                                                dx  = unpack( px );
-                                                                dx1 = unpack( px1 );
-                                                                m[3] = dx;
-                                                                m1[3] = dx1;
-                                                		
-						
-                                        s[0] = pack(m);            
-                                        s[1] = pack(m1);            
-					cnn.pushPixels(pack(s));
-			end
-			else begin
-					stream <= False;
-			end
-		
-               
-		endrule*/
-
 		rule layerOut;
 				if(numFilters < Filters) begin
                                 if(c0 < ((_Layerimg[l]-2)/(K))*(_Layerimg[l]-2)-1) begin
@@ -239,8 +112,8 @@ module mkXilibus();
                                         datas = unpack(dat.data);
 					DataType dx = unpack(datas[0]);
 					DataType dy = unpack(datas[1]);
-
-					//$display(" %d %d --- %d Layer %d ", fxptGetInt(dx), fxptGetInt(dy), c0, l);
+					if(x == 16 || l == 1)
+					$display(" %d %d --- %d Layer %d ", fxptGetInt(dx), fxptGetInt(dy), c0, l);
 					storePixel(datas[0], datas[1], datas[2], datas[3], datas[4], datas[5], datas[6], datas[7],numFilters, l+1, IMG,0);	
 					c0 <= c0 + 1;	
 				end

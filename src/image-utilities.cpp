@@ -110,18 +110,6 @@ void initialize_imageCPP()
     load_weights();
 
     int counter = 0;
-    for(int i = 0; i<FILTERS; i++){
-	for(int j=0; j<9; j++){
-		for(int k=0; k<4; k++)
-			if(j == 4 )
-			ID[counter++] = 1;
-			else
-			ID[counter++] = 0; 
-		for(int k=0; k<4; k = k + 1)
-			ID[counter++] = 0;
-	}
-    }
-
     
 	
     FILE* file = fopen ("input/default.txt", "r");
@@ -138,15 +126,10 @@ void initialize_imageCPP()
       		 fscanf (file, "%d %d %d", &i, &j, &k);          
     	}
 	
-	for(int i=0 ;i<IMG; i+=2){
-		for(int j=0;j<IMG; j++){
-			for(int k=0;k<4; k++)
-				ID[counter++] = inputVolume[i][j][k]+1;
-			for(int k=0;k<4; k++)
-				ID[counter++] = inputVolume[i+1][j][k]+1;
-		}
-	}
 
+
+	for(int filters = 0; filters < 2; filters++) {
+	for(int depth = 0; depth < 2; depth++) {
 	for(int i = 0; i<FILTERS; i++){
         for(int j=0; j<9; j++){
                 for(int k=0; k<4; k++)
@@ -158,17 +141,23 @@ void initialize_imageCPP()
                         ID[counter++] = 0;
         	}
     	}
+	
+	printf(" counter = %d ", counter);
 
 	for(int i=0 ;i<IMG; i+=2){
                 for(int j=0;j<IMG; j++){
                         for(int k=0;k<4; k++)
-                                ID[counter++] = inputVolume[i][j][k]+1;
+                                ID[counter++] = /*(i*j + 10)%255 + 1;*/ ((inputVolume[i][j][k]+1))<< 6;
                         for(int k=0;k<4; k++)
-                                ID[counter++] = inputVolume[i+1][j][k]+1;
+                                ID[counter++] = /*((i+1)*j + 10)%255 + 1;*/ ((inputVolume[i+1][j][k]+1)) << 6 ;
                 }
         }
+	}
+	}
 
-	for(int depth = 0 ; depth < 4; depth++) {     
+
+
+	for(int depth = 0 ; depth < 8; depth++) {     
         for(int i = 0; i<FILTERS; i++){
                 for(int j=0; j<9; j++){
                         for(int k=0; k<4; k++)
@@ -184,9 +173,9 @@ void initialize_imageCPP()
         for(int i=0 ;i<IMG; i+=2){
                 for(int j=0;j<IMG; j++){
                         for(int k=0;k<4; k++)
-                                ID[counter++] = inputVolume[i][j][k]+1;
+                                ID[counter++] = /*(i*j + 10)%255 + 1;*/ ((inputVolume[i][j][k]+1))<< 6;
                         for(int k=0;k<4; k++)
-                                ID[counter++] = inputVolume[i+1][j][k]+1;
+                                ID[counter++] = /*((i+1)*j + 10)%255 + 1;*/ ((inputVolume[i+1][j][k]+1)) << 6 ;
                 }
         }
         }
@@ -391,10 +380,11 @@ extern "C"
 
 extern "C"
 {
-	short int streamData(int index){
+	short int streamData1(int index){
 			return ID[streamC + index];
 			
 	}
+	
 }
 extern "C"
 {
@@ -442,11 +432,7 @@ extern "C"
 int main()
 {	
 	initialize_imageCPP();
-	int c = 0;
-	//for(int i=0; i<FILTERS; i++)
-		for(int j=0;j<9; j++)
-			for(int k = 0; k<8; k++)
-				printf(" %d ", 	ID[c++]);
-	return 0;
+	   for(int i=1152; i<1200; i+=4)
+                std::cout<<ID[i] << "  ";
 }
 

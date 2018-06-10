@@ -18,4 +18,12 @@ interface MultirateFilter;
 endinterface: MultirateFilter
 
 
+typedef struct {
+   Bit #(1) valid;
+   Bit #(128) data;
+   Bit #(16) slot;
+   Bit #(4) pad;
+   Bit #(1) last;
+} PCIE_PKT deriving (Bits, Eq, FShow);
+
 endpackage: TubeHeader

@@ -16,13 +16,13 @@ import FIFOF::*;
 #define DW 8
 #define SL 25088
 
-typedef struct {
+/*typedef struct {
    Bit #(1) valid;
    Bit #(128) data;
    Bit #(16) slot;
    Bit #(4) pad;
    Bit #(1) last;
-} PCIE_PKT deriving (Bits, Eq, FShow);
+} PCIE_PKT deriving (Bits, Eq, FShow);*/
 
 interface Sort_IFC;
    method Action  put (PCIE_PKT x);
@@ -64,8 +64,8 @@ module mkTestBench(Sort_IFC);
 
 
 		//###################LAYERS CODE-GEN PART ##################################
-                Int#(12)  _LayerDepths[4] = {8,16,16,16};
-                Int#(10)  _LayerFilters[4] ={16,16,16,16};
+                Int#(12)  _LayerDepths[4] = {8,32,16,16};
+                Int#(10)  _LayerFilters[4] ={32,16,16,16};
                 Bool      _LayerMaxPool[4] = {False,False, False, False};
                 //Int#(32)  _Layerimg[4]  = {16,16,112,112};
                 Int#(32)  _Layerimg[4]  = {224,224,224,224};
@@ -113,12 +113,13 @@ module mkTestBench(Sort_IFC);
  
 		rule layerIn(clk>=1 && depthDone == False && c2 < SL && pad == False); 
 		
-                        Vector#(K, Bit#(64)) s = newVector;
-				Vector#(2, Bit#(64)) p = unpack(pixels.first); pixels.deq;
+                        Vector#(K, Bit#(64)) s = unpack(pixels.first); pixels.deq; //newVector;
+				/*Vector#(2, Bit#(64)) p = unpack(pixels.first); pixels.deq;
                                 for(Int#(10) i=0; i<K; i = i+1) begin
 					Vector#(4, DataType) m = unpack(p[i]);
+						$display(" preparing for convolution %d ", fxptGetInt(m[0])); 
                                                s[i] = pack(m);
-				end
+				end*/
                                 cnn.sliceIn(s);
                      
 			if(c2 == SL -1 ) begin
@@ -152,6 +153,10 @@ module mkTestBench(Sort_IFC);
 					_fLN <= _fLN + 4;
 				
 				
+
+				//if(filter == 16)
+				//	cnn.print;
+				
 				if(_LN >= _LayerDepths[layer]) begin
 					if(filter + Filters == _LayerFilters[layer]) begin
 						cnn.resetNet(0 , _LayerMaxPool[layer+1], truncate(layer+1), truncate(_Layerimg[layer+1]), _LayerOutputs[layer+1]);
@@ -183,7 +188,7 @@ module mkTestBench(Sort_IFC);
 		endrule
 		
 		rule checkFlush(depthDone == True && c == True);
-			let d = cnn.flushDone;
+			let d <- cnn.flushDone;
 			$display (" waiting here %d ", clk);
 			if (d) begin
 				if(layer == 4)

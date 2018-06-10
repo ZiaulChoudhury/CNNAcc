@@ -25,6 +25,7 @@ interface Convolver;
         method ActionValue#(Vector#(DW,DataType)) receive;
         method Action reboot(Int#(10) img);
         method Action rebootDone;
+	method Action print;
 endinterface: Convolver
 
 
@@ -34,6 +35,7 @@ endinterface: Convolver
 		
 		//############################################# INITS ############################################
 		Reg#(Bool) _rebut <- mkReg(False);
+		Reg#(Bool) _print <- mkReg(False);
                 Reg#(UInt#(4)) _FR <- mkReg(0);	
 		Reg#(Bit#(64)) windowBuffer[Roof][Stencil*Stencil];
 		Reg#(UInt#(10)) res[Roof];
@@ -174,8 +176,10 @@ endinterface: Convolver
                         for(BramLength i =0 ;i<Banks; i = i+1) begin
                                 store[i] <= inputFmap.get(i);
 				
-				/*Vector#(4, DataType) dat = unpack(inputFmap.get(i));
-                                $display(" ---> sending for convolution %d @clk ", fxptGetInt(dat[0]), clk);*/
+				/*if(_print == True) begin
+				Vector#(4, DataType) dat = unpack(inputFmap.get(i));
+                                $display(" ---> sending for convolution %d @clk ", fxptGetInt(dat[0]), clk);
+				end*/
 
                         end
 			_latch <= True;
@@ -238,6 +242,9 @@ endinterface: Convolver
                                         rule popMAC (_rebut == False);
                                                 let d <- _PE[f][k].result;
                                                 forward[f][k].enq(d);
+
+						/*if(_print == True)
+							$display(" RESULT = %d ", fxptGetInt(d));*/
                                         endrule
 
 
@@ -318,6 +325,10 @@ endinterface: Convolver
 				 _PE[i][1].sendF(datas[1]);
 			end
 
+		endmethod
+
+		method Action print;
+			_print <= True;
 		endmethod
 	  endmodule: mkStage
 

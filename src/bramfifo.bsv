@@ -1,6 +1,6 @@
 import BRAM::*;
 import DefaultValue::*;
-import FIFO::*;
+import FIFOF::*;
 import FixedPoint::*;
 import TubeHeader::*;
 import datatypes::*;
@@ -9,6 +9,7 @@ interface BFIFO;
         method Action enq(DataType val);
         method ActionValue#(DataType) deq;
 	method Action startDeq;
+	method Action clear;
 endinterface: BFIFO
 
 #define MaxR 224
@@ -27,8 +28,10 @@ module mkBramFifo(BFIFO);
 	Reg#(Int#(20)) front <- mkReg(0);
 
 	Reg#(Bool) _enabDeq <- mkReg(False);
+	Reg#(Bool) _reboot <- mkReg(False);
 	Reg#(DataType) cache <- mkReg(0);
-	FIFO#(DataType) send <- mkFIFO;
+	FIFOF#(DataType) send <- mkFIFOF;
+	
 
 	function BRAMRequest#(Int#(20), DataType) makeRequest(Bool write, Int#(20) addr, DataType data);
         return BRAMRequest {
@@ -48,9 +51,16 @@ module mkBramFifo(BFIFO);
                                         front <= front+1;
 	endrule
 
-	rule fillcache;
+	rule fillcache (_reboot == False);
 		let d <- memory.portB.response.get;
 		send.enq(d);
+	endrule
+
+	rule _clear (_reboot == True);
+		_reboot <= False;
+		front <= 0;
+		rear <= 0;
+		send.clear;	
 	endrule
 
 	method Action enq(DataType data);
@@ -59,6 +69,7 @@ module mkBramFifo(BFIFO);
 				rear <= 0; 
 		else
 			rear <= rear +1;
+	
 	endmethod
 
 
@@ -69,6 +80,10 @@ module mkBramFifo(BFIFO);
 	method ActionValue#(DataType) deq;
 		let d = send.first; send.deq;
 		return d;
+	endmethod
+	
+	method Action clear if(_reboot == False);
+		_reboot <= True;
 	endmethod
 
 	

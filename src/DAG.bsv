@@ -28,7 +28,8 @@ interface Std;
 	method Action resetNet(Int#(12) sl, Bool pool, Int#(5) l, Int#(10) img, Int#(20) total_output);
 	method Action resetDone;
 	method Action probe;
-	method Bool flushDone;
+	method Action print;
+	method ActionValue#(Bool) flushDone;
 endinterface
 
 (*synthesize*)
@@ -37,7 +38,8 @@ module mkDAG(Std);
 
 		//####################################### INITS ####################################
 		FIFOF#(Bit#(64)) instream[2];
-                Reg#(Bit#(16)) _forward[DRAM];
+                Reg#(Bool) _print <- mkReg(False);
+		Reg#(Bit#(16)) _forward[DRAM];
                 FIFO#(Bit#(16)) forward[DRAM];
 		FIFOF#(DataType) _PartialProd[DW];
 		//FIFOF#(DataType) flushQ[DW];
@@ -47,6 +49,7 @@ module mkDAG(Std);
 		Reg#(Int#(5))  layer <- mkReg(0);
 		Reg#(Int#(20)) total_out <- mkReg(0);
 		Reg#(Int#(20)) flushed[DW];
+		Reg#(Bool) _StartFlushing[DW];
 		Pulse _stats[DW];
 		Reg#(DataType)  store[DW];
 		Reg#(DataType)  _sum[DW];
@@ -64,8 +67,12 @@ module mkDAG(Std);
 		Reg#(int) clk <- mkReg(0);
 		Convolver stage <- mkStage;
 		MemOut outSlice[DW];
-		Integer _depths[4] = {8,16,16,16};
-                Reg#(Int#(8)) dr <- mkReg(0);
+		Integer _depths[4] = {8,32,16,16};
+                Reg#(Int#(8)) dr[8];
+                Reg#(Int#(8)) lx <- mkReg(0);
+
+		for(int i=0 ;i<8; i = i + 1)
+		 	dr[i] <- mkReg(0);
 		
 		//#####################################################################################			
 		for(int i=0; i< Filters; i = i+1) begin
@@ -81,6 +88,7 @@ module mkDAG(Std);
 			_r[k] <- mkPulse;
 			_s[k] <- mkPulse;
 			_s0[k] <- mkPulse;
+			_StartFlushing[k] <- mkReg(False);
 			store[k] <- mkReg(0);
 			_sum[k] <- mkReg(0);
 			flushed[k] <- mkReg(0);
@@ -108,8 +116,10 @@ module mkDAG(Std);
 			Vector#(K, Bit#(64)) _datas = newVector;
                         for(int i=0; i< K; i = i+1) begin
                                 let d = instream[i].first; instream[i].deq;
-				Vector#(4, DataType) dat = unpack(d);
-				_datas[i] = unpack(d);
+				Vector#(4, DataType) fx = unpack(d);
+				//if(_print == True)
+				//	$display(" sending for convolution %d ", fxptGetInt(fx[0]));
+				_datas[i] = d;
 			end
                         stage.send(_datas);
 
@@ -122,9 +132,6 @@ module mkDAG(Std);
 			for(int i = 0; i< DW ; i = i + 1) begin
                                 store[i] <= datas[i];
                         end
-
-			//clk <= clk + 1;
-			//$display(" convolver output %d ", clk%24642);
 			
 			for(int i=0; i< DW ; i = i+1)
 				_z[i].send;	
@@ -186,6 +193,8 @@ module mkDAG(Std);
 				end
                                 else begin
                                         let v = fxptTruncate(fxptAdd(prods, d));
+					if(_print == True && k <2 )
+						$display(" adding %d with %d ", fxptGetInt(prods), fxptGetInt(d));
 					sums = v;
                                 end
 
@@ -210,38 +219,37 @@ module mkDAG(Std);
 		
 		rule _flushOut;
 			_s[k].ishigh;
-			/*if( k == 0 && layer == 1) begin
-			$display(" starting to flush %d", clk);
+			if(_print == True &&  k == 0 && layer == 0) begin
+			$display(" starting to flush %d  VALUE %d ", clk, fxptGetInt(_sum[k]));
 			clk <= clk + 1;
-			end*/
+			end
+
 			flushQ[k].enq(_sum[k]);
 		endrule
 
 		end
 	
 		for(Int#(8) _dram = 0; _dram < fromInteger(DW) ; _dram = _dram + DRAM)
-                for(Int#(8) k=0; k<DRAM; k = k+1) begin
-                rule _DRAMflush (dr == _dram/DRAM);
-                                let d <-  flushQ[k + _dram].deq;
-                                forward[k].enq(pack(d));
-                                
-				if(k == 0)
-                                if(flushed[k + _dram] == 24641) begin
-                                        if(dr == fromInteger((DW-DRAM)/DRAM)) begin
+                rule _DRAMflush (dr[lx] == _dram/DRAM);
+				for (Int#(8) k=0; k<DRAM; k = k+1) begin
+                                	let d <-  flushQ[k + _dram].deq;
+                                	forward[k].enq(pack(d));
+				end
 
-                                                        dr <= 0;
-                                        end
-                                        else
-                                                        dr <= dr + 1;
-                                        flushed[k + _dram] <= 0;
+				if(flushed[0] == 24641) begin
+                                        	if(dr[lx] == fromInteger((DW-DRAM)/DRAM)) begin
+                                                        lx <= lx + 1;
+                                        	end
+                                        	else
+                                                        dr[lx] <= dr[lx] + 1;
+					flushed[0] <= 0;
 			
                                 end
                                 else
-                                flushed[k + _dram] <= flushed[k + _dram] + 1;
+                                flushed[0] <= flushed[0] + 1;
 
                 endrule
-                end
-	
+		
         	method ActionValue#(Vector#(DRAM,Bit#(16))) receive;	
 			Vector#(DRAM,Bit#(16)) datas = newVector;
 			for(UInt#(10) k=0; k<DRAM; k = k+1) begin
@@ -296,12 +304,14 @@ module mkDAG(Std);
 
 		method Action resetDone if (_reset == True);
                                 stage.rebootDone;	
+					if(_print == True)
+						stage.print;
 				_reset <= False;		
 				for(int i=0 ;i<DW; i = i + 1)
 					outSlice[i].clean;
 		endmethod
 
-		method Bool flushDone;
+		method ActionValue#(Bool) flushDone;
 
 			 	Bit#(DW) x = 0;
 				Bit#(DW) y = 0;
@@ -311,14 +321,20 @@ module mkDAG(Std);
 					y[i] = 1;
 			
 				end				
-                                if(slice >= fromInteger(_depths[layer]-4))
-                                        for(int i=0 ;i< DW; i = i + 1) begin
-                                                if(flushed[i] == 0)
+                                if(slice >= fromInteger(_depths[layer]-4) && layer > 0)	
+					if(dr[layer-1] == fromInteger((DW-DRAM)/DRAM)) begin
+						return True;
+					end
+					else
+						return False;
+					/*for(int i=0 ;i< 1; i = i + 1) begin
+						$display(" F %d", flushed[i]);
+                                                if(flushed[i] < 3)
 							x[i] = 1;
 						else
 							x[i] = 0;
-                                        end
-				
+                                        end*/
+				else
 				return x == y;
 
 		endmethod
@@ -331,6 +347,11 @@ module mkDAG(Std);
 		method Action probe;
 				for(int i=0 ;i<DW; i = i+1)
 					_stats[i].ishigh;
+		endmethod
+
+		method Action print;
+
+				_print <= True;
 		endmethod
 
 

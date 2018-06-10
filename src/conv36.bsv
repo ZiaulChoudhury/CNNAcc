@@ -69,6 +69,7 @@ module mkConv36(Conv36);
 	rule _input_decompose;
 		let  packet = _inputQ.first; _inputQ.deq;
 		Vector#(9, Bit#(64)) wb = unpack(packet);
+		
 		for(int _Elem = 0; _Elem < 9 ; _Elem  = _Elem + 1) begin
 			Vector#(4, Bit#(16)) _block = unpack(wb[_Elem]);
 			for(int _depth = 0; _depth < 4; _depth = _depth + 1) begin
