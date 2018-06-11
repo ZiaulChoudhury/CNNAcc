@@ -49,7 +49,6 @@ module mkDAG(Std);
 		Reg#(Int#(5))  layer <- mkReg(0);
 		Reg#(Int#(20)) total_out <- mkReg(0);
 		Reg#(Int#(20)) flushed[DW];
-		Reg#(Bool) _StartFlushing[DW];
 		Pulse _stats[DW];
 		Reg#(DataType)  store[DW];
 		Reg#(DataType)  _sum[DW];
@@ -88,7 +87,6 @@ module mkDAG(Std);
 			_r[k] <- mkPulse;
 			_s[k] <- mkPulse;
 			_s0[k] <- mkPulse;
-			_StartFlushing[k] <- mkReg(False);
 			store[k] <- mkReg(0);
 			_sum[k] <- mkReg(0);
 			flushed[k] <- mkReg(0);
@@ -116,9 +114,6 @@ module mkDAG(Std);
 			Vector#(K, Bit#(64)) _datas = newVector;
                         for(int i=0; i< K; i = i+1) begin
                                 let d = instream[i].first; instream[i].deq;
-				Vector#(4, DataType) fx = unpack(d);
-				//if(_print == True)
-				//	$display(" sending for convolution %d ", fxptGetInt(fx[0]));
 				_datas[i] = d;
 			end
                         stage.send(_datas);
@@ -193,8 +188,6 @@ module mkDAG(Std);
 				end
                                 else begin
                                         let v = fxptTruncate(fxptAdd(prods, d));
-					if(_print == True && k <2 )
-						$display(" adding %d with %d ", fxptGetInt(prods), fxptGetInt(d));
 					sums = v;
                                 end
 
@@ -208,8 +201,6 @@ module mkDAG(Std);
 				_s0[k].send;
 			end
 
-
-
 		endrule
 
 		rule _storeInMem;
@@ -219,11 +210,6 @@ module mkDAG(Std);
 		
 		rule _flushOut;
 			_s[k].ishigh;
-			if(_print == True &&  k == 0 && layer == 0) begin
-			$display(" starting to flush %d  VALUE %d ", clk, fxptGetInt(_sum[k]));
-			clk <= clk + 1;
-			end
-
 			flushQ[k].enq(_sum[k]);
 		endrule
 
@@ -312,30 +298,14 @@ module mkDAG(Std);
 		endmethod
 
 		method ActionValue#(Bool) flushDone;
-
-			 	Bit#(DW) x = 0;
-				Bit#(DW) y = 0;
-
-				for(int i=0; i<DW; i = i + 1) begin
-					x[i] = 1;
-					y[i] = 1;
-			
-				end				
                                 if(slice >= fromInteger(_depths[layer]-4) && layer > 0)	
 					if(dr[layer-1] == fromInteger((DW-DRAM)/DRAM)) begin
 						return True;
 					end
 					else
-						return False;
-					/*for(int i=0 ;i< 1; i = i + 1) begin
-						$display(" F %d", flushed[i]);
-                                                if(flushed[i] < 3)
-							x[i] = 1;
-						else
-							x[i] = 0;
-                                        end*/
+					return False;
 				else
-				return x == y;
+				return True;
 
 		endmethod
 

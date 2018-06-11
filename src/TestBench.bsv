@@ -16,14 +16,6 @@ import FIFOF::*;
 #define DW 8
 #define SL 25088
 
-/*typedef struct {
-   Bit #(1) valid;
-   Bit #(128) data;
-   Bit #(16) slot;
-   Bit #(4) pad;
-   Bit #(1) last;
-} PCIE_PKT deriving (Bits, Eq, FShow);*/
-
 interface Sort_IFC;
    method Action  put (PCIE_PKT x);
    method ActionValue #(PCIE_PKT)  get;
@@ -114,12 +106,6 @@ module mkTestBench(Sort_IFC);
 		rule layerIn(clk>=1 && depthDone == False && c2 < SL && pad == False); 
 		
                         Vector#(K, Bit#(64)) s = unpack(pixels.first); pixels.deq; //newVector;
-				/*Vector#(2, Bit#(64)) p = unpack(pixels.first); pixels.deq;
-                                for(Int#(10) i=0; i<K; i = i+1) begin
-					Vector#(4, DataType) m = unpack(p[i]);
-						$display(" preparing for convolution %d ", fxptGetInt(m[0])); 
-                                               s[i] = pack(m);
-				end*/
                                 cnn.sliceIn(s);
                      
 			if(c2 == SL -1 ) begin
@@ -152,10 +138,6 @@ module mkTestBench(Sort_IFC);
 				else
 					_fLN <= _fLN + 4;
 				
-				
-
-				//if(filter == 16)
-				//	cnn.print;
 				
 				if(_LN >= _LayerDepths[layer]) begin
 					if(filter + Filters == _LayerFilters[layer]) begin
@@ -238,7 +220,7 @@ module mkTestBench(Sort_IFC);
                         let pcie_pkt = pa;
                         rg_raw_input_data <= pa;
                         Vector#(2, Bit#(64)) raw_data = unpack(pcie_pkt.data);
-			if(raw_data[1] == 0) 
+			if(raw_data[1] == 1125912791875585) 
 				_weight.enq(raw_data[0]);
 			else begin
 				pixels.enq(pcie_pkt.data);

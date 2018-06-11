@@ -133,23 +133,22 @@ void initialize_imageCPP()
 	for(int i = 0; i<FILTERS; i++){
         for(int j=0; j<9; j++){
                 for(int k=0; k<4; k++)
-                        if(j == 4 )
-                        ID[counter++] = 1;
+                        if( j == 4 )
+                        	ID[counter++] = 1<<14;
                         else
-                        ID[counter++] = 0; 
+                        	ID[counter++] = 0; 
                 for(int k=0; k<4; k = k + 1)
-                        ID[counter++] = 0;
+                        ID[counter++] = (k+1);
         	}
     	}
 	
-	printf(" counter = %d ", counter);
 
 	for(int i=0 ;i<IMG; i+=2){
                 for(int j=0;j<IMG; j++){
                         for(int k=0;k<4; k++)
-                                ID[counter++] = /*(i*j + 10)%255 + 1;*/ ((inputVolume[i][j][k]+1))<< 6;
+                               	ID[counter++] = ((inputVolume[i][j][k]))<< 6;
                         for(int k=0;k<4; k++)
-                                ID[counter++] = /*((i+1)*j + 10)%255 + 1;*/ ((inputVolume[i+1][j][k]+1)) << 6 ;
+                                ID[counter++] = ((inputVolume[i+1][j][k])) << 6 ;
                 }
         }
 	}
@@ -162,20 +161,20 @@ void initialize_imageCPP()
                 for(int j=0; j<9; j++){
                         for(int k=0; k<4; k++)
                         if(j == 4 )
-                        ID[counter++] = 1;
+                        ID[counter++] = 1<<14;
                         else
                         ID[counter++] = 0;
                         for(int k=0; k<4; k = k + 1)
-                        ID[counter++] = 0;
+                        ID[counter++] = (k+1);
                         }
         }
 
         for(int i=0 ;i<IMG; i+=2){
                 for(int j=0;j<IMG; j++){
                         for(int k=0;k<4; k++)
-                                ID[counter++] = /*(i*j + 10)%255 + 1;*/ ((inputVolume[i][j][k]+1))<< 6;
+                                ID[counter++] = ((inputVolume[i][j][k]))<< 6;
                         for(int k=0;k<4; k++)
-                                ID[counter++] = /*((i+1)*j + 10)%255 + 1;*/ ((inputVolume[i+1][j][k]+1)) << 6 ;
+                                ID[counter++] = ((inputVolume[i+1][j][k])) << 6 ;
                 }
         }
         }

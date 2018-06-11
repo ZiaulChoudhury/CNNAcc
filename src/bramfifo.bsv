@@ -8,8 +8,6 @@ import datatypes::*;
 interface BFIFO;
         method Action enq(DataType val);
         method ActionValue#(DataType) deq;
-	method Action startDeq;
-	method Action clear;
 endinterface: BFIFO
 
 #define MaxR 224
@@ -26,9 +24,6 @@ module mkBramFifo(BFIFO);
 	BRAM2Port#(Int#(20), DataType) memory <- mkBRAM2Server(cfg);
 	Reg#(Int#(20)) rear <- mkReg(0);
 	Reg#(Int#(20)) front <- mkReg(0);
-
-	Reg#(Bool) _enabDeq <- mkReg(False);
-	Reg#(Bool) _reboot <- mkReg(False);
 	Reg#(DataType) cache <- mkReg(0);
 	FIFOF#(DataType) send <- mkFIFOF;
 	
@@ -51,16 +46,9 @@ module mkBramFifo(BFIFO);
                                         front <= front+1;
 	endrule
 
-	rule fillcache (_reboot == False);
+	rule fillcache;
 		let d <- memory.portB.response.get;
 		send.enq(d);
-	endrule
-
-	rule _clear (_reboot == True);
-		_reboot <= False;
-		front <= 0;
-		rear <= 0;
-		send.clear;	
 	endrule
 
 	method Action enq(DataType data);
@@ -72,19 +60,11 @@ module mkBramFifo(BFIFO);
 	
 	endmethod
 
-
-	method Action startDeq;
-		deqStarted <= True;
-	endmethod
-
 	method ActionValue#(DataType) deq;
 		let d = send.first; send.deq;
 		return d;
 	endmethod
 	
-	method Action clear if(_reboot == False);
-		_reboot <= True;
-	endmethod
 
 	
 endmodule: mkBramFifo

@@ -48,9 +48,9 @@ module mkConv36(Conv36);
 		a1[i]  <- mkPulse;
 		for(int j= 0; j<9; j = j + 1) begin
 			window[i][j] <- mkWire;
-			if(j == 4)
+			/*if(j == 4)
 			coeffs[i][j] <- mkReg(1);	
-			else
+			else*/
 			coeffs[i][j] <- mkReg(0);	
 			_PE[i][j] <- mkMult;
 			wc[i][j] <- mkWire;
@@ -158,13 +158,13 @@ module mkConv36(Conv36);
 
 		
 	method Action sendF(Vector#(9, Bit#(64)) filter);
-			/*for(int j=0; j<9; j= j + 1) begin
+			for(int j=0; j<9; j= j + 1) begin
 					Vector#(4, CoeffType) d = unpack(filter[j]);
 					coeffs[0][j] <= d[0];
 					coeffs[1][j] <= d[1];
 					coeffs[2][j] <= d[2];
 					coeffs[3][j] <= d[3];				
-			end*/
+			end
 	endmethod
 	
 	method ActionValue#(DataType) result;

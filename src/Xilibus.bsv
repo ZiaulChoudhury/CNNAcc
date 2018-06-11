@@ -60,7 +60,6 @@ module mkXilibus();
 
 		rule init_rule (init);
 			initialize_image();
-			//cnn.start;
                 	init <= False;	
       		endrule
 
@@ -70,7 +69,6 @@ module mkXilibus();
 		t <= t + 1;
 		test <= test + 1;
 		endrule
-
 
 		//###################LAYERS CODE-GEN PART ##################################
                 Int#(12)  _LayerDepths[4] = {8,32,16,16};
@@ -91,11 +89,14 @@ module mkXilibus();
 			end
 			
 			PCIE_PKT packet = PCIE_PKT {valid: 1, data: pack (s1), slot: 'h1234, pad: 'h5, last: 0};
+
+			/*Bit#(128) load = pack(s1);
+			Vector#(2, Bit#(64)) mx = unpack(load);
+			$display(" %d ", mx[1]);*/
+			
                         cnn.put(packet);
 			inc();
 			if( z >= _LayerInputs[l]-1) begin
-				if(l == 1)
-					$display(" stopping here ");
 				stream <= False;
 				z <= 0;
 			end
