@@ -137,7 +137,10 @@ module mkTestBench(Sort_IFC);
 				end
 				else
 					_fLN <= _fLN + 4;
-				
+			
+
+				if(filter == 16)
+					cnn.print;	
 				
 				if(_LN >= _LayerDepths[layer]) begin
 					if(filter + Filters == _LayerFilters[layer]) begin

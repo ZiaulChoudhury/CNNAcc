@@ -217,6 +217,7 @@ module mkDAG(Std);
 	
 		for(Int#(8) _dram = 0; _dram < fromInteger(DW) ; _dram = _dram + DRAM)
                 rule _DRAMflush (dr[lx] == _dram/DRAM);
+				
 				for (Int#(8) k=0; k<DRAM; k = k+1) begin
                                 	let d <-  flushQ[k + _dram].deq;
                                 	forward[k].enq(pack(d));
@@ -229,10 +230,9 @@ module mkDAG(Std);
                                         	else
                                                         dr[lx] <= dr[lx] + 1;
 					flushed[0] <= 0;
-			
                                 end
                                 else
-                                flushed[0] <= flushed[0] + 1;
+                                	flushed[0] <= flushed[0] + 1;
 
                 endrule
 		

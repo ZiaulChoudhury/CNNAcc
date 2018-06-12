@@ -242,9 +242,6 @@ endinterface: Convolver
                                         rule popMAC (_rebut == False);
                                                 let d <- _PE[f][k].result;
                                                 forward[f][k].enq(d);
-
-						/*if(_print == True)
-							$display(" RESULT = %d ", fxptGetInt(d));*/
                                         endrule
 
 

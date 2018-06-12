@@ -1,0 +1,108 @@
+import BRAM::*;
+import DefaultValue::*;
+import FIFO::*;
+import FixedPoint::*;
+import datatypes::*;
+
+#define MaxR 112
+#define MaxC 224
+#define Rate 2
+
+interface MemOut;
+        method Action write(DataType val);
+	method Action latchData;
+        method Action read;
+        method DataType get;
+	method Action clean;
+endinterface: MemOut
+
+(*synthesize*)
+module mkMemOut(MemOut);
+
+	BRAM_Configure cfg = defaultValue;
+	cfg.allowWriteResponseBypass = False;
+	Integer size = MaxR*MaxC/(Rate);
+	cfg.memorySize = size;
+	Reg#(UInt#(3)) id <- mkReg(0);
+	Reg#(UInt#(3)) id2 <- mkReg(0);
+	BRAM2Port#(UInt#(20), DataType) memory[2];
+		memory[0] <- mkBRAM2Server(cfg);
+		memory[1] <- mkBRAM2Server(cfg);
+	
+	Reg#(DataType) _cache <- mkReg(0);
+	Reg#(DataType) _cache1 <- mkReg(0);
+	Reg#(UInt#(20)) rear <- mkReg(0);
+        Reg#(UInt#(20)) front <- mkReg(0);
+	Wire#(Bool)                                 _l0            <- mkWire;
+        Wire#(Bool)                                 _l1            <- mkWire;
+
+	Bool _empty = (front == fromInteger(size-1));
+   	Bool _full  = (rear == fromInteger(size-1));
+
+	function BRAMRequest#(UInt#(20), DataType) makeRequest(Bool write, UInt#(20)  addr, DataType data);
+        return BRAMRequest {
+                write : write,
+                responseOnWrite : False,
+                address : addr,
+                datain : data
+        };
+	endfunction
+
+
+	(*mutually_exclusive = "cleanMemory, latchMemory, latchMemory1" *)
+        rule cleanMemory (_l0 == True);
+                        let d1 <- memory[0].portB.response.get;
+                        let d2 <- memory[1].portB.response.get;
+			_cache <= d1;
+			_cache1 <= d2;
+        endrule
+
+        rule latchMemory (_l1 == True && front >= fromInteger(size));
+                        	
+				let d <- memory[1].portB.response.get;
+                        	_cache <= d;
+			
+
+        endrule
+		
+	rule latchMemory1 (_l1 == True && front < fromInteger(size));
+                                
+				let d <- memory[0].portB.response.get;
+                                _cache <= d;
+        endrule
+
+	method Action latchData;
+				_l1 <= True;
+	endmethod
+
+
+	method Action write(DataType data);
+			rear <= rear + 1;
+			if (rear >= fromInteger(size))
+				memory[1].portA.request.put(makeRequest(True, rear-fromInteger(size), data));
+			else
+				memory[0].portA.request.put(makeRequest(True, rear, data));
+	endmethod
+
+	
+	method Action read;
+                front <= front + 1;
+		if (front >= fromInteger(size))
+			memory[1].portB.request.put(makeRequest(False, front-fromInteger(size), 0));
+		else
+			memory[0].portB.request.put(makeRequest(False, front, 0));
+
+	endmethod
+
+	method DataType get;
+		return _cache;
+	endmethod
+	
+	method Action clean;
+			rear <= 0;
+			front <= 0;
+			_l0 <= True;
+              
+        endmethod
+	
+endmodule
