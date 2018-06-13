@@ -56,7 +56,7 @@ module mkTestBench(Sort_IFC);
 
 
 		//###################LAYERS CODE-GEN PART ##################################
-                Int#(12)  _LayerDepths[4] = {8,32,16,16};
+                Int#(12)  _LayerDepths[4] = {4,32,16,16};
                 Int#(10)  _LayerFilters[4] ={32,16,16,16};
                 Bool      _LayerMaxPool[4] = {False,False, False, False};
                 //Int#(32)  _Layerimg[4]  = {16,16,112,112};
@@ -109,7 +109,7 @@ module mkTestBench(Sort_IFC);
                                 cnn.sliceIn(s);
                      
 			if(c2 == SL -1 ) begin
-				$display(" PADDING NOW ");
+				//$display(" PADDING NOW ");
 				pad <= True;
 			end
 
@@ -125,7 +125,7 @@ module mkTestBench(Sort_IFC);
 
 		rule updateLayer (depthDone == True && b == False && c == False && imgFetch == True);
 				b <= True;
-				$display(" Filter %d to %d ", filter, filter + Filters);	
+				//$display(" Filter %d to %d ", filter, filter + Filters);	
 				if(_fLN + 4 >= _LayerDepths[_flayer]) begin
 					if(_ffilter + Filters == _LayerFilters[_flayer]) begin
 						_ffilter <= 0;
@@ -174,7 +174,7 @@ module mkTestBench(Sort_IFC);
 		
 		rule checkFlush(depthDone == True && c == True);
 			let d <- cnn.flushDone;
-			$display (" waiting here %d ", clk);
+			//$display (" waiting here %d ", clk);
 			if (d) begin
 				if(layer == 4)
 					$finish(0);
@@ -191,7 +191,7 @@ module mkTestBench(Sort_IFC);
 					c1 <= c1 + 1;
 				end
 				else begin
-				$display(" FULL DEPTH RETREIVED ");
+				//$display(" FULL DEPTH RETREIVED ");
 				pad <= False;
 				c2 <= 0;
 				pixels.clear;

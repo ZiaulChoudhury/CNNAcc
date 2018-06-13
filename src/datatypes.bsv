@@ -5,7 +5,7 @@ import FixedPoint::*;
 #define Mr 1024
 
 typedef FixedPoint#(10,6) DataType;
-typedef FixedPoint#(2,14) CoeffType;
+typedef FixedPoint#(1,15) CoeffType;
 typedef UInt#(14) BramWidth;
 typedef UInt#(6) BramLength;
 

@@ -158,13 +158,44 @@ module mkConv36(Conv36);
 
 		
 	method Action sendF(Vector#(9, Bit#(64)) filter);
+			CoeffType zero = 0;
 			for(int j=0; j<9; j= j + 1) begin
 					Vector#(4, CoeffType) d = unpack(filter[j]);
-					coeffs[0][j] <= d[0];
-					coeffs[1][j] <= d[1];
-					coeffs[2][j] <= d[2];
-					coeffs[3][j] <= d[3];				
+					Vector#(4, Bit#(16)) c = unpack(filter[j]);
+
+					/*$write("  "); fxptWrite(4, d[0]);
+					$write("  "); fxptWrite(4, d[1]);
+					$write("  "); fxptWrite(4, d[2]);
+					$write("  "); fxptWrite(4, d[3]);
+				
+					$display();*/
+
+					
+					if(c[0][0] == 1)
+						coeffs[0][j] <= fxptTruncate(fxptSub(zero,d[0]));
+					else
+						coeffs[0][j] <= d[0];
+
+					if(c[1][0] == 1)
+						coeffs[1][j] <= fxptTruncate(fxptSub(zero,d[1]));
+					else
+						coeffs[1][j] <= d[1];
+
+					if(c[2][0] == 1)
+						coeffs[2][j] <= fxptTruncate(fxptSub(zero,d[2]));
+					else
+						coeffs[2][j] <= d[2];
+
+					if(c[3][0] == 1)
+						coeffs[3][j] <= fxptTruncate(fxptSub(zero,d[3]));
+					else
+						coeffs[3][j] <= d[3];
+
+					
+					
 			end
+
+			//$display(" ----------------------------------------------- ");
 	endmethod
 	
 	method ActionValue#(DataType) result;

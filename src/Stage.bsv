@@ -253,7 +253,7 @@ endinterface: Convolver
 		rule _reboot (_rebut == True && _FR > 0);
                         _latch <= False;
                     
-			$display(" convolver cleaned @clk %d " , clk);
+			//$display(" convolver cleaned @clk %d " , clk);
 			_bp0.clean;	
 			_bp1.clean;
                         for(int i=0; i<fromInteger(Roof); i = i+1) begin
@@ -318,10 +318,9 @@ endinterface: Convolver
 
         	method Action weights(Vector#(Filters,Vector#(9,Bit#(64))) datas);
 			for(int i=0; i<Filters ; i = i + 1) begin
-				 _PE[i][0].sendF(datas[0]);
-				 _PE[i][1].sendF(datas[1]);
+				 _PE[i][0].sendF(datas[i]);
+				 _PE[i][1].sendF(datas[i]);
 			end
-
 		endmethod
 
 		method Action print;

@@ -91,52 +91,21 @@ void load_weights()
 
     fscanf(file,"%d %d %d", &layer, &depth, &fils);   
     	for(int f = 0; f< fils; f++) {
-		//printf("\n FILTER %d \n ", f);
+		printf("\n FILTER %d \n ", f);
 		for(int s=0;s<depth; s++){
-			//printf("\n DEPTH %d \n ", s);
+			printf("\n DEPTH %d \n ", s);
 			for(int k = 0; k<9;k++) {
 				fscanf(file, "%f", &filters[k][s][f][l]);
-				//printf(" %f ", filters[k][s][f][l]);
+				printf(" %f ", filters[k][s][f][l]);
 			} 
-			//printf("\n  ############################### \n");
+			printf("\n  ############################### \n");
 		}
 
-		//printf(" \n --------------------------------------------- \n ");
+		printf(" \n --------------------------------------------- \n ");
         }
    }
 
 }
-extern "C"
-{
-        short int  getValue(int l, int s, int f, int i)
-        {
-                unsigned long num;
-                short int y;
-		short int one = 1;
-		short int zero = 65534;
-		
-                if ( l <16 && s < 512 && f <512 && i< 15) {
-                float n = filters[i][s][f][l];
-                if(n<0)
-                n = fabs(n);
-                int k = 15;
-                std::string a = decimalToBinary(n,k);
-                std::bitset<16> x(a);
-		num = x.to_ulong();
-		y = (short int) num;
-		y = (y>>1)<<1;
-		
-                if(filters[i][s][f][l] < 0)
-                        y = (y | 0x0001);
-                        
-		return y;
-                }
-                else
-                        return 0;
-        }
-
-}
-
 
 void initialize_imageCPP()
 {
@@ -146,7 +115,7 @@ void initialize_imageCPP()
     int counter = 0;
     
 	
-    FILE* file = fopen ("input/drive.txt", "r");
+    FILE* file = fopen ("input/default.txt", "r");
     int i = 0, j=0,k=0;
     int count = 0;
 
@@ -163,11 +132,13 @@ void initialize_imageCPP()
 
 
 	for(int filters = 0; filters < 2; filters++) {
-	for(int depth = 0; depth < 1; depth++) {
+	for(int depth = 0; depth < 2; depth++) {
 	for(int i = 0; i<FILTERS; i++){
         for(int j=0; j<9; j++){
-                for(int k=0; k<3; k++)
-                        	ID[counter++] = getValue(0,k,filters*FILTERS + i,j) ;
+                for(int k=0; k<4; k++)
+                        if( j == 4 )
+                        	ID[counter++] = 1<<14;
+                        else
                         	ID[counter++] = 0; 
                 for(int k=0; k<4; k = k + 1)
                         ID[counter++] = (k+1);
@@ -192,7 +163,10 @@ void initialize_imageCPP()
         for(int i = 0; i<FILTERS; i++){
                 for(int j=0; j<9; j++){
                         for(int k=0; k<4; k++)
-                        ID[counter++] = getValue(1, depth*4 + k, i,j);
+                        if(j == 4 )
+                        ID[counter++] = 1<<14;
+                        else
+                        ID[counter++] = 0;
                         for(int k=0; k<4; k = k + 1)
                         ID[counter++] = (k+1);
                         }
@@ -348,6 +322,8 @@ extern "C"
 				inputVolume[(row+1)][(col+1)][slice + 1] = (float)x3;
 				inputVolume[(row+1)][(col+1)][slice + 2] = (float)x5;
 				inputVolume[(row+1)][(col+1)][slice + 3] = (float)x7;
+                                
+			
 				}
 				else
 				{
@@ -381,12 +357,13 @@ extern "C"
 {
 		void printVolume(){
 
-			for(int k=0;k<32;k++) 
-			for(int i=0; i<IMG; i++) {
+
+			for(int k=0;k<8;k++) 
+			for(int i=0; i<16; i++) {
 				inputVolume1[0][i][k] = 0;
-				inputVolume1[IMG-1][i][k] = 0;
+				inputVolume1[16][i][k] = 0;
 				inputVolume1[i][0][k] = 0;
-				inputVolume1[i][IMG-1][k] = 0;
+				inputVolume1[i][16][k] = 0;
 			}
 		
 
@@ -419,6 +396,37 @@ extern "C"
         }
 }
 
+extern "C"
+{
+        short int  getValue(int l, int s, int f, int i)
+	{
+		unsigned long num;
+                short int y; 
+		if ( l <16 && s < 512 && f <512 && i< 15) {
+        	float n = filters[i][s][f][l];
+		if(n<0)
+		n = fabs(n);
+        	int k = 15;
+        	std::string a = decimalToBinary(n,k);
+       		std::bitset<16> x(a);
+		if(n < 0) {
+			x[0] = 1;
+			num = x.to_ulong();
+			y = (short int) num;
+		}
+		else {
+		
+			x[0] = 0;
+			num = x.to_ulong();
+                        y = (short int) num;
+		}
+			return y;
+		}
+		else
+			return 0;
+        }
+	
+}
 extern "C"
 {
 	int checkSign(int l, int s, int f, int i){

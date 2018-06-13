@@ -66,7 +66,7 @@ module mkDAG(Std);
 		Reg#(int) clk <- mkReg(0);
 		Convolver stage <- mkStage;
 		MemOut outSlice[DW];
-		Integer _depths[4] = {8,32,16,16};
+		Integer _depths[4] = {4,32,16,16};
                 Reg#(Int#(8)) dr[8];
                 Reg#(Int#(8)) lx <- mkReg(0);
 
@@ -255,15 +255,13 @@ module mkDAG(Std);
 		method Action resetNet(Int#(12) sl, Bool pool, Int#(5) l, Int#(10) img, Int#(20) total_output);
 			layer <= l;
 			total_out <= total_output;
-			$display(" starting to process depth %d of layer %d", sl, l);
+			//$display(" starting to process depth %d of layer %d", sl, l);
                       	stage.reboot(img);
 
 			Vector#(Filters, Vector#(9, Bit#(64))) datas = newVector;
                         for(int i=0 ;i< Filters; i = i+1)
-                                for(int j=0 ;j <9; j = j+1) begin
+                                for(int j=0 ;j <9; j = j+1)
                                      datas[i][j] = filters[i][j];
-                                end
-			
                         stage.weights(datas);
 			doPool <= pool;
 			slice <= sl;	
