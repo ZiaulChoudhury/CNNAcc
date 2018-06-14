@@ -16,6 +16,7 @@ int readArray[] = {1,2,1,2,1,2};
 int storeArray[] = {1,2,1,2,1,2};
 int row = 0;
 int col = 0;
+int counter = 0;
 int count = 0;
 
 typedef struct{
@@ -142,8 +143,6 @@ void initialize_imageCPP()
 {
 	
     load_weights();
-
-    int counter = 0;
     
 	
     FILE* file = fopen ("input/drive.txt", "r");
@@ -188,7 +187,7 @@ void initialize_imageCPP()
 
 
 
-	for(int depth = 0 ; depth < 8; depth++) {     
+	/*for(int depth = 0 ; depth < 8; depth++) {     
         for(int i = 0; i<FILTERS; i++){
                 for(int j=0; j<9; j++){
                         for(int k=0; k<4; k++)
@@ -206,7 +205,7 @@ void initialize_imageCPP()
                                 ID[counter++] = ((inputVolume[i+1][j][k])) << 6 ;
                 }
         }
-        }
+        }*/
 
 	
   	fclose (file);    
@@ -379,28 +378,39 @@ extern "C"
 
 extern "C"
 {
-		void printVolume(){
+void printVolume(){
 
-			for(int k=0;k<32;k++) 
-			for(int i=0; i<IMG; i++) {
-				inputVolume1[0][i][k] = 0;
-				inputVolume1[IMG-1][i][k] = 0;
-				inputVolume1[i][0][k] = 0;
-				inputVolume1[i][IMG-1][k] = 0;
-			}
-		
-
-			for(int i=0; i<16; i++){
-				for(int j=0; j<16; j++) {
-					std::cout<< inputVolume1[i][j][0] << "  ";
-				}
-			std::cout<<"\n";
-			}
-
-			std::cout<<" --------------  VOLUME -------------------- "<<"\n";
-			
-								
+	for(int k=0;k<32;k++) 
+		for(int i=0; i<IMG; i++) {
+			inputVolume1[0][i][k] = 0;
+			inputVolume1[IMG-1][i][k] = 0;
+			inputVolume1[i][0][k] = 0;
+			inputVolume1[i][IMG-1][k] = 0;
 		}
+	
+	
+	for(int depth = 0 ; depth < 8; depth++) {
+        for(int i = 0; i<FILTERS; i++){
+                for(int j=0; j<9; j++){
+                        for(int k=0; k<4; k++)
+                        ID[counter++] = getValue(1, depth*4 + k, i,j);
+                        for(int k=0; k<4; k = k + 1)
+                        ID[counter++] = (k+1);
+                        }
+        }
+
+        for(int i=0 ;i<IMG; i+=2){
+                for(int j=0;j<IMG; j++){
+                        for(int k=0;k<4; k++)
+                                ID[counter++] = ((inputVolume1[i][j][k]))<< 6;
+                        for(int k=0;k<4; k++)
+                                ID[counter++] = ((inputVolume1[i+1][j][k])) << 6 ;
+                }
+        }
+        }
+		
+			
+}
 }
 
 extern "C"

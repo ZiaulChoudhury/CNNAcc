@@ -14,7 +14,7 @@ import FIFOF::*;
 
 #define DRAM 4
 #define DW 8
-#define SL 25088
+//#define SL 25088
 
 interface Sort_IFC;
    method Action  put (PCIE_PKT x);
@@ -58,11 +58,12 @@ module mkTestBench(Sort_IFC);
 		//###################LAYERS CODE-GEN PART ##################################
                 Int#(12)  _LayerDepths[4] = {4,32,16,16};
                 Int#(10)  _LayerFilters[4] ={32,16,16,16};
-                Bool      _LayerMaxPool[4] = {False,False, False, False};
+                Bool      _LayerMaxPool[4] = {False,True, False, False};
                 //Int#(32)  _Layerimg[4]  = {16,16,112,112};
                 Int#(32)  _Layerimg[4]  = {224,224,224,224};
                 //Int#(20)  _LayerOutputs[4]  = {98,98,6050,6050};
-                Int#(20)  _LayerOutputs[4]  = {24642,24642,24642,24642};
+		Int#(20)  _LayerOutputs[4]  = {24642,24642,24642,24642};
+                Int#(20)  _SL[4]  = {25088,25088,24642,24642};
 		//#############################################################	
 
 		
@@ -103,12 +104,12 @@ module mkTestBench(Sort_IFC);
 
                 endrule
  
-		rule layerIn(clk>=1 && depthDone == False && c2 < SL && pad == False); 
+		rule layerIn(clk>=1 && depthDone == False && c2 < _SL[layer] && pad == False); 
 		
                         Vector#(K, Bit#(64)) s = unpack(pixels.first); pixels.deq; //newVector;
                                 cnn.sliceIn(s);
                      
-			if(c2 == SL -1 ) begin
+			if(c2 == _SL[layer] -1 ) begin
 				//$display(" PADDING NOW ");
 				pad <= True;
 			end
@@ -125,7 +126,7 @@ module mkTestBench(Sort_IFC);
 
 		rule updateLayer (depthDone == True && b == False && c == False && imgFetch == True);
 				b <= True;
-				//$display(" Filter %d to %d ", filter, filter + Filters);	
+
 				if(_fLN + 4 >= _LayerDepths[_flayer]) begin
 					if(_ffilter + Filters == _LayerFilters[_flayer]) begin
 						_ffilter <= 0;
@@ -139,22 +140,22 @@ module mkTestBench(Sort_IFC);
 					_fLN <= _fLN + 4;
 			
 
-				if(filter == 16)
-					cnn.print;	
-				
 				if(_LN >= _LayerDepths[layer]) begin
 					if(filter + Filters == _LayerFilters[layer]) begin
 						cnn.resetNet(0 , _LayerMaxPool[layer+1], truncate(layer+1), truncate(_Layerimg[layer+1]), _LayerOutputs[layer+1]);
 						filter <= 0;
 						layer <= layer + 1;
+						$display(" Filter %d to %d ", 0, Filters);
 					end
 					else begin
 						cnn.resetNet(0 , _LayerMaxPool[layer], truncate(layer), truncate(_Layerimg[layer]), _LayerOutputs[layer]);
                                         	filter <= filter + Filters;
+						$display(" Filter %d to %d ", filter + Filters, filter + 2*Filters);	
 					end
 					_LN <= 4;
                                 end
 				else begin
+					$display(" Filter %d to %d ", filter, filter + Filters);
                                 	cnn.resetNet(truncate(_LN) , _LayerMaxPool[layer], truncate(layer), truncate(_Layerimg[layer]), _LayerOutputs[layer]);
                                 	_LN <= _LN + 4;
 				end
@@ -219,7 +220,7 @@ module mkTestBench(Sort_IFC);
                  endmethod*/
 
 	
-		method Action put (PCIE_PKT pa) if(c2 < SL);
+		method Action put (PCIE_PKT pa) if(c2 < _SL[layer]);
                         let pcie_pkt = pa;
                         rg_raw_input_data <= pa;
                         Vector#(2, Bit#(64)) raw_data = unpack(pcie_pkt.data);

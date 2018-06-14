@@ -73,7 +73,7 @@ module mkXilibus();
 		//###################LAYERS CODE-GEN PART ##################################
                 Int#(12)  _LayerDepths[4] = {4,32,16,16};
                 Int#(10)  _LayerFilters[4] ={32,16,16,16};
-                Bool      _LayerMaxPool[4] = {False,False, False, False};
+                Bool      _LayerMaxPool[4] = {False,True, False, False};
                 Int#(32)  _Layerimg[4]  = {224,224,224,224};
                 Int#(20)  _LayerOutputs[4]  = {24642,24642,24642,24642};
                 Int#(32)  _LayerInputs[4]  = {50464,201856,24642,24642};
@@ -120,29 +120,27 @@ module mkXilibus();
                                         Vector#(8, Bit#(16)) datas = newVector;
                                         PCIE_PKT dat <- cnn.get;
                                         datas = unpack(dat.data);
-					DataType d0 = unpack(datas[0]);
-					DataType d1 = unpack(datas[1]);
-					DataType d2 = unpack(datas[2]);
-                                        DataType d3 = unpack(datas[3]);
-					DataType d4 = unpack(datas[4]);
-                                        DataType d5 = unpack(datas[5]);
-					DataType d6 = unpack(datas[6]);
-                                        DataType d7 = unpack(datas[7]);
 
 
-					if(l == 1)
-					$display(" %d ", fxptGetInt(d0));
-					$display(" %d ", fxptGetInt(d1));
-					$display(" %d ", fxptGetInt(d2));
-					$display(" %d ", fxptGetInt(d3));
-					$display(" %d ", fxptGetInt(d4));
-					$display(" %d ", fxptGetInt(d5));
-					$display(" %d ", fxptGetInt(d6));
-					$display(" %d ", fxptGetInt(d7));
-					test <= test + 1;
-					//if(x == 16 || l == 1)
-					//$display(" %d %d --- %d Layer %d ", fxptGetInt(dx), fxptGetInt(dy), c0, l);
-					storePixel(datas[0], datas[1], datas[2], datas[3], datas[4], datas[5], datas[6], datas[7],numFilters, l+1, IMG,0);	
+					if(_LayerMaxPool[l]) begin
+						if(c0 < ((_Layerimg[l]-2)/(K))*(_Layerimg[l]/2-1))
+						for(int f = 0; f < DRAM ; f = f +1) begin
+							DataType v0 = unpack(datas[f*2 + 0]);
+							$display(" %d ", fxptGetInt(v0));
+						end
+					end
+					else begin
+
+							for(int f = 0; f < DRAM ; f = f +1) begin
+                                                        DataType v0 = unpack(datas[f*2 + 0]);
+							DataType v1 = unpack(datas[f*2 + 1]);
+							if(l == 1) begin
+                                                        	$display(" %d ", fxptGetInt(v0));
+								$display(" %d ", fxptGetInt(v1));
+							end
+                                                	end
+							storePixel(datas[0], datas[1], datas[2], datas[3], datas[4], datas[5], datas[6], datas[7],numFilters, l+1, IMG,0);	
+					end
 					c0 <= c0 + 1;	
 				end
 				else begin
@@ -158,12 +156,11 @@ module mkXilibus();
 							rows <= 0;
 							cols <= 0;
 							fil <= 0;
-							//$display(" layer done ");
 							_LN <= 0;
+							$display(" layer done ");
 							stream <= True;
-							//printVolume();
+							printVolume();
 							if(l == 1) begin
-								$display(" total output %d ", test);
 								$finish(0);
 
 							end

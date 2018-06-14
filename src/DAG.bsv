@@ -58,7 +58,6 @@ module mkDAG(Std);
 		Pulse	      _z[DW];
 		Pulse	      _s[DW];
 		Pulse	      _s0[DW];
-		Pulse	      _t[DRAM];
 		Reg#(Bit#(64))  filters[Filters][9];
 		Reg#(Bool) 	doPool <- mkReg(False);	
 		Reg#(Bool) 	_reset <- mkReg(False);	
@@ -67,6 +66,7 @@ module mkDAG(Std);
 		Convolver stage <- mkStage;
 		MemOut outSlice[DW];
 		Integer _depths[4] = {4,32,16,16};
+		Integer _modes[4]  = {1,2,2,2};
                 Reg#(Int#(8)) dr[8];
                 Reg#(Int#(8)) lx <- mkReg(0);
 
@@ -102,7 +102,6 @@ module mkDAG(Std);
 
 		for(int k = 0; k<DRAM; k = k + 1) begin
 			forward[k] <- mkFIFO;
-			_t[k] <- mkPulse;
 		end
 	
               
@@ -255,7 +254,7 @@ module mkDAG(Std);
 		method Action resetNet(Int#(12) sl, Bool pool, Int#(5) l, Int#(10) img, Int#(20) total_output);
 			layer <= l;
 			total_out <= total_output;
-			//$display(" starting to process depth %d of layer %d", sl, l);
+			$display(" starting to process depths %d to %d of layer %d", sl, sl+4, l);
                       	stage.reboot(img);
 
 			Vector#(Filters, Vector#(9, Bit#(64))) datas = newVector;
@@ -276,8 +275,6 @@ module mkDAG(Std);
 					_PartialProd[i].clear;
 			end
 
-			for(int i = 0;i<DRAM; i = i + 1)
-				_t[i].clean;
 			for(int i=0;i<Filters; i = i + 1)
 				maxPools[i].clean;
 			for(int i = 0;i<K ; i = i+1) begin
